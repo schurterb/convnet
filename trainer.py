@@ -17,7 +17,7 @@ theano.config.floatX = 'float32'
 
 class Trainer(object):
     
-    #Define the cost function for calculating the updates
+    """Define the cost function for calculating the updates"""
     def __set_cost(self):
         if (self.cost_func == 'class'):
             self.cost = T.mean(T.nnet.binary_crossentropy(self.out, self.Y.dimshuffle(1,0,'x','x','x')))
@@ -25,7 +25,7 @@ class Trainer(object):
             self.cost = T.mean(1/2.0*((self.out - self.Y.dimshuffle(1,0,'x','x','x'))**2)) 
             
     
-    #Define the updates to be performed each training round
+    """Define the updates to be performed each training round"""
     def __set_updates(self, learning_method):
         
         w_grads = T.grad(self.cost, self.w)       
@@ -114,11 +114,12 @@ class Trainer(object):
             ]    
             self.updates = w_updates + b_updates
             
-
-    #Network must be a list constaining the key components of the network
-    # to be trained, namely its symbolic theano reprentation (first parameter),
-    # its cost function (second parameter), its shared weight and bias 
-    # variables (second and third parameters, rspectively)
+    """
+    Network must be a list constaining the key components of the network
+     to be trained, namely its symbolic theano reprentation (first parameter),
+     its cost function (second parameter), its shared weight and bias 
+     variables (second and third parameters, rspectively)
+    """
     def __init__(self, network, **kwargs):
         #Network parameters
         self.X = network[0]
@@ -132,12 +133,18 @@ class Trainer(object):
         learning_method = kwargs.get('learning_method', 'standardSGD')
         self.rng = kwargs.get('rng', np.random.RandomState(42))
         self.batch_size = kwargs.get('batch_size', 1)
+        self.use_batches = kwargs.get('use_batches', True)
         self.cost_func = kwargs.get('cost_func', 'MSE')
         self.lr = kwargs.get('learning_rate', 0.0001)
         self.dr = kwargs.get('decay_rate', 0.99)
         self.damp = kwargs.get('damping', 1.0e-08)
         self.b1 = kwargs.get('beta1', 0.9)
         self.b2 = kwargs.get('beta2', 0.999)
+        
+        self.seg = int(self.net_shape.shape[0]*(self.net_shape[0,1] -1) +1)
+        self.offset = (self.seg -1)/2    
+        self.input_shape = (self.seg, self.seg, self.seg, self.batch_size)
+        self.output_shape = (3, self.batch_size)
      
         
         #Initialize the cost function and the list of updates to be performed
@@ -146,27 +153,55 @@ class Trainer(object):
         
         #Initialize the training function
         self.train_model = theano.function(inputs=[self.X, self.Y], outputs=self.cost, updates=self.updates, allow_input_downcast=True)
-        
-        
-    #Train the network on a specified training set with a specified target
-    # (supervised training). This training uses stochastic gradient descent
-    # mini-batch sizes set at initialization. Training samples are selected 
-    # such that there is an equal number of positive and negative samples 
-    # each batch.        
-    #Params: train_set must be a 3D matrix containing the traning data
-    #        train_labels must be a 4D matrix containing the affinity labeling
-    #       for the train_set data
-    #        duration = number of updates to perform
-    #        early_stop = degree of improvement in average cost function over 100 updates
-    #       if set to None, there will be no early stopping detection
-    #Returns: network cost at each update
+    
+    """
+    Randomly select a batch_size array of samples to train for a given update.
+    """
+    def __get_samples(self, train_set, train_labels):
+        #Keep count of the number of positive and negative examples to keep their
+        # ratios even per 
+        num_pos = 0
+        num_neg = 0    
+        Xsub = np.zeros(self.input_shape)
+        Ysub = np.zeros(self.output_shape)
+        for i in range(0, self.batch_size):
+            #For this update, randomly select whether this will be a positive or
+            # a negative example
+            sel = self.rng.randn(1)
+            if (sel > 0) and (num_pos/self.batch_size < 0.5):
+                sel = 1
+                num_pos += 1
+            else:
+                sel = 0
+                num_neg += 1
+            #Draw a random sample to train on
+            new_sample = self.rng.randint(0, train_set.shape[-1]-self.seg, 3)
+            xpos = new_sample[0]
+            ypos = new_sample[1]
+            zpos = new_sample[2]
+            Ysub[:, i] = train_labels[:, xpos+self.offset, ypos+self.offset, zpos+self.offset]
+            while ((Ysub[:, i].sum() > 0) and (sel == 0)) or ((Ysub[:, i].sum() == 0) and (sel == 1)):    #Set the first half to be negative examples
+                new_sample = self.rng.randint(0, train_set.shape[-1]-self.seg, 3)
+                xpos = new_sample[0]
+                ypos = new_sample[1]
+                zpos = new_sample[2]
+                Ysub[:, i] = train_labels[:, xpos+self.offset, ypos+self.offset, zpos+self.offset]
+                
+            Xsub[:,:,:,i] = train_set[xpos:xpos+self.seg, ypos:ypos+self.seg, zpos:zpos+self.seg]
+                
+        return Xsub, Ysub
+    
+    
+    """   
+    Train the network on a specified training set with a specified target
+     (supervised training). This training uses stochastic gradient descent
+     mini-batch sizes set at initialization. Training samples are selected 
+     such that there is an equal number of positive and negative samples 
+     each batch.        
+    Returns: network cost at each update
+    """
     def train(self, train_set, train_labels, duration, early_stop = None):
-        
-        seg = int(self.net_shape.shape[0]*(self.net_shape[0,1] -1) +1)
-        offset = (seg -1)/2    
-        input_shape = (seg, seg, seg, self.batch_size)
-        output_shape = (3, self.batch_size)
-        
+
         #Epochs to average over for early stopping
         averaging_len = 100
         if(early_stop == None):
@@ -176,40 +211,17 @@ class Trainer(object):
         
         epoch = 0
         while(epoch < duration):
-            #Keep count of the number of positive and negative examples to keep their
-            # ratios even per 
-            num_pos = 0
-            num_neg = 0    
-            Xsub = np.zeros(input_shape)
-            Ysub = np.zeros(output_shape)
-            for i in range(0, self.batch_size):
-                #For this update, randomly select whether this will be a positive or
-                # a negative example
-                sel = self.rng.randn(1)
-                if (sel > 0) and (num_pos/self.batch_size < 0.5):
-                    sel = 1
-                    num_pos += 1
-                else:
-                    sel = 0
-                    num_neg += 1
-                #Draw a random sample to train on
-                new_sample = self.rng.randint(0, train_set.shape[-1]-seg, 3)
-                xpos = new_sample[0]
-                ypos = new_sample[1]
-                zpos = new_sample[2]
-                Ysub[:, i] = train_labels[:, xpos+offset, ypos+offset, zpos+offset]
-                while ((Ysub[:, i].sum() > 0) and (sel == 0)) or ((Ysub[:, i].sum() == 0) and (sel == 1)):    #Set the first half to be negative examples
-                    new_sample = self.rng.randint(0, train_set.shape[-1]-seg, 3)
-                    xpos = new_sample[0]
-                    ypos = new_sample[1]
-                    zpos = new_sample[2]
-                    Ysub[:, i] = train_labels[:, xpos+offset, ypos+offset, zpos+offset]
-                
-                print `xpos` + ' ' + `ypos` + ' ' + `zpos`
-                Xsub[:,:,:,i] = train_set[xpos:xpos+seg, ypos:ypos+seg, zpos:zpos+seg]
-            #Now, train the network on this mini-batch
-            train_error[epoch] = self.train_model(Xsub, Ysub)
             
+            Xsub, Ysub = self.__get_samples(train_set, train_labels)
+                
+            if(self.use_batches):
+                train_error[epoch] = self.train_model(Xsub, Ysub)
+            else:
+                epoch_error = np.zeros(self.batch_size)
+                for i in range(0, self.batch_size):
+                    epoch_error[i] = self.train_model(Xsub[:,:,:,i], Ysub[:,i])
+                train_error[epoch] = np.mean(epoch_error)
+                
             #If the current error is sufficiently better than the original error, than
             # let us stop
             if (epoch%averaging_len == 0) and (epoch >= averaging_len*2):

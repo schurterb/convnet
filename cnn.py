@@ -17,7 +17,7 @@ theano.config.floatX = 'float32'
 
 class CNN(object):  
         
-    #Randomly initialize the weights
+    """Randomly initialize the weights"""
     def __init_weights(self):
 
         #Initialize the filters and biases (with random values)
@@ -31,15 +31,13 @@ class CNN(object):
             fan_out = self.net_shape[layer, 0] * (self.net_shape[layer, 1]**3)
             bound =np.sqrt(6. / (fan_in + fan_out))
             w  += (theano.shared(np.asarray(self.rng.uniform(low= -bound, high= bound, size= self.net_shape[layer, :]), dtype=theano.config.floatX)) ,)
-            #Bias terms are all initialized to zero
             b += (theano.shared(np.asarray(np.ones(self.net_shape[layer, 0]), dtype=theano.config.floatX)) ,)
-            #Size of sample seen by each layer is smaller than the one before
             im_size = im_size - self.net_shape[layer, -1] + 1
         
         self.w = w
         self.b = b
         
-    #Initialize the weights based on an input file
+    """Initialize the weights based on an input file"""
     def __load_weights(self):
         
         #Initialize the filters and biases with stored values
@@ -54,13 +52,13 @@ class CNN(object):
         self.w = w
         self.b = b
         
-    #Save the weights to an output file
+    """Save the weights to an output file"""
     def save_weights(self, folder):
         for i in range(0, self.net_shape.shape[0]):
             self.w[i].get_value().tofile(folder + 'layer_'+`i`+'_weights.csv', sep=',')
             self.b[i].get_value().tofile(folder + 'layer_'+`i`+'_bias.csv', sep=',')
             
-    #Define the network model
+    """Define the network model"""
     def __model(self):
 
         #Customizable non-linearity, added 6/8/15
@@ -100,7 +98,7 @@ class CNN(object):
         # and the second one is the number of affinity graph types (for each dimension)
         self.out = out.dimshuffle(0, 2, 1, 3, 4)     
         
-    #Define the cost function used to evaluate this network
+    """Define the cost function used to evaluate this network"""
     def __set_cost(self):
         if (self.cost_func == 'class'):
             self.cost = T.mean(T.nnet.binary_crossentropy(self.out, self.Y.dimshuffle(1,0,'x','x','x')))
@@ -108,7 +106,7 @@ class CNN(object):
             self.cost = T.mean(1/2.0*((self.out - self.Y.dimshuffle(1,0,'x','x','x'))**2))        
         
         
-    #Initialize the network
+    """Initialize the network"""
     def __init__(self, **kwargs):
         
         num_layers = kwargs.get('num_layers', 3)
@@ -154,26 +152,33 @@ class CNN(object):
         
         #Create a function to calculate the loss of this network
         self.eval_cost = theano.function(inputs=[self.X, self.Y], outputs=self.cost, allow_input_downcast=True)
-        
-    #Make a prediction on a set of inputs
-    #Params: x must be a cubic 3D matrix
-    #Returns: a 4D array where the first dimension is the affinity in each 
-    #       dimension and the last 3 dimensions correspond to the output image
+       
+    """
+    Make a prediction on a set of inputs
+    Params: x must be a cubic 3D matrix
+    Returns: a 4D array where the first dimension is the affinity in each 
+           dimension and the last 3 dimensions correspond to the output image
+    """
     def predict(self, x):
         out_size = x.shape[0] - self.sample_size + 1
         return self.predictor(x).reshape((3, out_size, out_size, out_size)) 
         
-    #Calculate the loss of the networks prediction based on a target output
-    #Params: x must be a cubic 3D matrix consisting of per-pixel input values
-    #        y must be a cubic 3D matrix consisting of per-pixel affinity labels
-    #       and must be (sample_size-1) smaller than x
-    #Returns: scalar loss value
+    """
+    Calculate the loss of the networks prediction based on a target output
+    Params: x must be a cubic 3D matrix consisting of per-pixel input values
+            y must be a cubic 3D matrix consisting of per-pixel affinity labels
+    Returns: scalar loss value
+    """
     def loss(self, x, y):
-        return self.eval_cost(x, y)
+        return self.eval_cost(x, y[:, self.offset:-self.offset,
+                                      self.offset:-self.offset,
+                                      self.offset:-self.offset])
 
-    #Return the network for training
-    #Returns a list containing the symbolic definition of the network as well
-    # as the shared weights and the shared biases
+    """
+    Return the network for training
+    Returns a list containing the symbolic definition of the network as well
+     as the shared weights and the shared biases
+    """
     def get_network(self):
         return [self.X, self.Y, self.out, self.w, self.b, self.net_shape]
         

@@ -25,19 +25,19 @@ num_layers = 5
 num_filters = 6
 filter_size = 5 #This only one side of each filter, which are assumed to be cubic
 batch_size = 10
-use_batches = False #If false, the weights are updated after each example
 activation = 'relu'
 #cost_func = 'MSE'
 
 #Create the network to train
 network = CNN(num_layers = num_layers, num_filters = num_filters, 
               filter_size = filter_size, batch_size = batch_size,
-              activation = activation, use_mini_batches = use_batches)
+              activation = activation)
 #------------------------------------------------------------------------------
               
               
 #Learning Methods include standard SGD, RMSprop, and ADAM
 learning_method = 'RMSprop'
+use_batches = False #If false, the weights are updated after each example
 #Hyper-parameters for the chosen learning method
 learning_rate = 0.0001
 decay_rate = 0.98
@@ -46,7 +46,7 @@ damping = 1.0e-8
 #Create a trainer for the network
 network_trainer = Trainer(network.get_network(), batch_size = batch_size,
                           learning_rate = learning_rate, decay_rate = decay_rate,
-                          damping = damping)
+                          damping = damping, use_batches = use_batches)
 #------------------------------------------------------------------------------
 
 
