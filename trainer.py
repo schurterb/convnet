@@ -20,9 +20,9 @@ class Trainer(object):
     """Define the cost function for calculating the updates"""
     def __set_cost(self):
         if (self.cost_func == 'class'):
-            self.cost = T.mean(T.nnet.binary_crossentropy(self.out, self.Y.dimshuffle(1,0,'x','x','x')))
+            self.cost = T.mean(T.nnet.binary_crossentropy(self.out, self.Y.dimshuffle('x',0,'x','x','x')))
         else:
-            self.cost = T.mean(1/2.0*((self.out - self.Y.dimshuffle(1,0,'x','x','x'))**2)) 
+            self.cost = T.mean(1/2.0*((self.out - self.Y.dimshuffle('x',0,'x','x','x'))**2)) 
             
     
     """Define the updates to be performed each training round"""
@@ -180,7 +180,7 @@ class Trainer(object):
             ypos = new_sample[1]
             zpos = new_sample[2]
             Ysub[:, i] = train_labels[:, xpos+self.offset, ypos+self.offset, zpos+self.offset]
-            while ((Ysub[:, i].sum() > 0) and (sel == 0)) or ((Ysub[:, i].sum() == 0) and (sel == 1)):    #Set the first half to be negative examples
+            while ((Ysub[:, i].sum() > 0) and (sel == 0)) or ((Ysub[:, i].sum() == 0) and (sel == 1)):
                 new_sample = self.rng.randint(0, train_set.shape[-1]-self.seg, 3)
                 xpos = new_sample[0]
                 ypos = new_sample[1]

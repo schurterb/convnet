@@ -65,7 +65,7 @@ class CNN(object):
         #Default is the hyperbolic tangent
 
         #Prepare input tensor
-        Xin = self.X.dimshuffle('x', 0, 3, 1, 2)
+        Xin = self.X.dimshuffle('x', 0, 'x', 1, 2)
 
         if((self.activation == 'sig') or (self.activation == 'Sig')): #Also include the option of only sigmoidal non-linear units
             #Layer 1: input layer
@@ -101,9 +101,9 @@ class CNN(object):
     """Define the cost function used to evaluate this network"""
     def __set_cost(self):
         if (self.cost_func == 'class'):
-            self.cost = T.mean(T.nnet.binary_crossentropy(self.out, self.Y.dimshuffle(1,0,'x','x','x')))
+            self.cost = T.mean(T.nnet.binary_crossentropy(self.out, self.Y.dimshuffle('x',0,'x','x','x')))
         else:
-            self.cost = T.mean(1/2.0*((self.out - self.Y.dimshuffle(1,0,'x','x','x'))**2))        
+            self.cost = T.mean(1/2.0*((self.out - self.Y.dimshuffle('x',0,'x','x','x'))**2))        
         
         
     """Initialize the network"""
@@ -119,7 +119,7 @@ class CNN(object):
         #Define the network shape
         self.net_shape = np.ndarray([num_layers, 5])
         #Define the first layer
-        self.net_shape[0,:] = [num_filters, filter_size, batch_size, filter_size, filter_size]
+        self.net_shape[0,:] = [num_filters, filter_size, 1, filter_size, filter_size]
         #Define all internal layers
         for i in range(1, num_layers-1):    #Network cannot be smaller than 2 layers
             self.net_shape[i,:] = [num_filters, filter_size, num_filters, filter_size, filter_size]
@@ -138,8 +138,8 @@ class CNN(object):
             self.__load_weights()
 
         #Input and Target variables for symbolic representation of network
-        self.X = T.ftensor4('X')
-        self.Y = T.fmatrix('Y')            
+        self.X = T.ftensor3('X')
+        self.Y = T.fvector('Y')            
             
         #Create the network model
         self.__model()
