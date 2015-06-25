@@ -30,14 +30,13 @@ activation = 'relu'
 
 #Create the network to train
 network = CNN(num_layers = num_layers, num_filters = num_filters, 
-              filter_size = filter_size, batch_size = batch_size,
-              activation = activation)
+              filter_size = filter_size, activation = activation)
 #------------------------------------------------------------------------------
               
               
 #Learning Methods include standard SGD, RMSprop, and ADAM
 learning_method = 'RMSprop'
-use_batches = False #If false, the weights are updated after each example
+use_batches = True #If false, the weights are updated after each example
 #Hyper-parameters for the chosen learning method
 learning_rate = 0.0001
 decay_rate = 0.98

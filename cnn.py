@@ -65,7 +65,7 @@ class CNN(object):
         #Default is the hyperbolic tangent
 
         #Prepare input tensor
-        Xin = self.X.dimshuffle('x', 0, 'x', 1, 2)
+        Xin = self.X.dimshuffle(3, 0, 'x', 1, 2)
 
         if((self.activation == 'sig') or (self.activation == 'Sig')): #Also include the option of only sigmoidal non-linear units
             #Layer 1: input layer
@@ -101,9 +101,9 @@ class CNN(object):
     """Define the cost function used to evaluate this network"""
     def __set_cost(self):
         if (self.cost_func == 'class'):
-            self.cost = T.mean(T.nnet.binary_crossentropy(self.out, self.Y.dimshuffle('x',0,'x','x','x')))
+            self.cost = T.mean(T.nnet.binary_crossentropy(self.out, self.Y.dimshuffle(1,0,'x','x','x')))
         else:
-            self.cost = T.mean(1/2.0*((self.out - self.Y.dimshuffle('x',0,'x','x','x'))**2))        
+            self.cost = T.mean(1/2.0*((self.out - self.Y.dimshuffle(1,0,'x','x','x'))**2))        
         
         
     """Initialize the network"""
@@ -112,7 +112,6 @@ class CNN(object):
         num_layers = kwargs.get('num_layers', 3)
         num_filters = kwargs.get('num_filters', 6)
         filter_size = kwargs.get('filter_size', 3)
-        batch_size = kwargs.get('batch_size', 1)
         
         self.sample_size = num_layers*(filter_size-1) + 1
         
@@ -138,8 +137,8 @@ class CNN(object):
             self.__load_weights()
 
         #Input and Target variables for symbolic representation of network
-        self.X = T.ftensor3('X')
-        self.Y = T.fvector('Y')            
+        self.X = T.ftensor4('X')
+        self.Y = T.fmatrix('Y')            
             
         #Create the network model
         self.__model()
@@ -161,7 +160,7 @@ class CNN(object):
     """
     def predict(self, x):
         out_size = x.shape[0] - self.sample_size + 1
-        return self.predictor(x).reshape((3, out_size, out_size, out_size)) 
+        return self.predictor(x[:,:,:].reshape((x.shape) + (1 ,))).reshape((3, out_size, out_size, out_size)) 
         
     """
     Calculate the loss of the networks prediction based on a target output
@@ -170,9 +169,11 @@ class CNN(object):
     Returns: scalar loss value
     """
     def loss(self, x, y):
-        return self.eval_cost(x, y[:, self.offset:-self.offset,
-                                      self.offset:-self.offset,
-                                      self.offset:-self.offset])
+        out_size = x.shape[0] - self.sample_size + 1
+        return self.eval_cost(x[:,:,:].reshape((x.shape) + (1 ,)), 
+                              y[:, self.offset:-self.offset,
+                                   self.offset:-self.offset,
+                                   self.offset:-self.offset].reshape((3, 1, out_size, out_size, out_size)))
 
     """
     Return the network for training
