@@ -4,37 +4,61 @@ Created on Wed May 27 11:23:54 2015
 
 @author: schurterb
 
-Functions for opening and closeing hdf5 files with training and testing data.
+Class for loading training or testing data. Currently only set up to support
+ hdf5 files.
 """
 
 import os
 import h5py
 
-#Opens hdf5 files containing the training (or testing) data and labels.
-#Params: data_folder containing training data
-#        data = name of hdf5 file contianing data
-#        labels = name of hdf5 file contianing labels for data
-#Returns: x = variable accessing data
-#         y = variable accessing labels for data
-#         tuple containing open hdf5 file accessors, closing them will close x
-#       and y. They must be closed after training and testing is complete.
-def open_data(data_folder,data, labels):
+class LoadData(object):
     
-    home_folder = os.getcwd() + '/'
-    os.chdir('/.')
+    """Open and read the data and label files"""
+    def __read_files(self):
+        
+        if(self.file_type == 'hdf5'):
+            self.data_file = h5py.File(self.folder + self.data_file_name, 'r')
+            self.x = self.data_file['main']
+            
+            self.label_file = h5py.File(self.folder + self.label_file_name, 'r')
+            self.y = self.label_file['main']
+            
+        else:   
+            raise TypeError("Unsupported file type")
     
-    data = h5py.File(data_folder + data, 'r')
-    x = data['main']
-
-    labels = h5py.File(data_folder + labels, 'r')
-    y = labels['main']
+    """
+    Must be initialized with a string specifying the directory containing
+     the data and labels. 
+    Directory must be the path from the root directory to data
+    """
+    def __init__(self, **kwargs):
+         
+         self.folder = kwargs.get('directory', '')
+         self.data_file_name = kwargs.get('data_file_name', None)
+         self.label_file_name = kwargs.get('label_file_name', None)
+         self.file_type = kwargs.get('file_type', 'hdf5')
+         
+         self.home_folder = os.getcwd() + '/'
+         os.chdir('/.')
+         
+         self.__read_files()
+         
+         os.chdir(self.home_folder)
+         
+    """Return the data set"""
+    def get_data(self):
+        return self.x
+        
+    """Return the label set"""
+    def get_labels(self):
+        return self.y
+         
+    """
+    Close the data and label files
+    In the case of hdf5 files, the data will no longer be accessible after this.
+    """
+    def close(self):
+        self.data_file.close()
+        self.label_file.close()
+        
     
-    #Return home after loading the data
-    os.chdir(home_folder)
-    return x, y, (data, labels)
-
-#Function to close hdf5 files containing training and testing data
-#Params: tuple containing file accessors
-def close_data(files):
-    for f in files:
-        f.close()
