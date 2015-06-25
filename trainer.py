@@ -131,6 +131,7 @@ class Trainer(object):
         
         #Trainint parameters
         learning_method = kwargs.get('learning_method', 'standardSGD')
+        self.print_updates = kwargs.get('print_updates', False)
         self.rng = kwargs.get('rng', np.random.RandomState(42))
         self.batch_size = kwargs.get('batch_size', 1)
         self.use_batches = kwargs.get('use_batches', True)
@@ -200,11 +201,13 @@ class Trainer(object):
      each batch.        
     Returns: network cost at each update
     """
-    def train(self, train_set, train_labels, duration, early_stop = None):
+    def train(self, train_set, train_labels, duration, early_stop = False):
 
         #Epochs to average over for early stopping
         averaging_len = 100
-        if(early_stop == None):
+        if(early_stop):
+            early_stop = 0.0001
+        else:
             early_stop = -1
         
         train_error = np.zeros(duration)
@@ -221,6 +224,9 @@ class Trainer(object):
                 for i in range(0, self.batch_size):
                     epoch_error[i] = self.train_model(Xsub[:,:,:,i:i+1], Ysub[:,i:i+1])
                 train_error[epoch] = np.mean(epoch_error)
+            
+            if(self.print_updates):
+                print 'Cost at update '+`epoch`+': '+`train_error[epoch]`
                 
             #If the current error is sufficiently better than the original error, than
             # let us stop

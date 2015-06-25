@@ -58,4 +58,4 @@ train_error = network_trainer.train(training_data.get_data(), training_data.get_
 
 
 #After training, close the data_files
-#training_data.close()
+training_data.close()
