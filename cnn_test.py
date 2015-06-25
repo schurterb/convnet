@@ -20,33 +20,25 @@ training_data = LoadData(directory = data_folder, data_file_name = data_file,
                          label_file_name = label_file)
 #------------------------------------------------------------------------------
                          
-                         
-#Number of layers in the network
+#Structural hyper-parameters
 num_layers = 5
-#Number of filters per layer (constant across the network)
 num_filters = 6
-#Size of filters in each layer (constant across the network)
-# note - this only one side of each filter, which are assumed to be cubic
-filter_size = 5
-#Size of mini-batches for training
+filter_size = 5 #This only one side of each filter, which are assumed to be cubic
 batch_size = 10
-#Activation function for the first num_layers-1 layers of the network
-#The last layer is always sigmoid, since the goal is to classify neighboring
-# pixels as connected or not, producing an affinity graph
+use_batches = False #If false, the weights are updated after each example
 activation = 'relu'
-#Cost function to evaluate the loss of the network, by default this is the MSE
 #cost_func = 'MSE'
 
 #Create the network to train
 network = CNN(num_layers = num_layers, num_filters = num_filters, 
               filter_size = filter_size, batch_size = batch_size,
-              activation = activation)
+              activation = activation, use_mini_batches = use_batches)
 #------------------------------------------------------------------------------
               
               
 #Learning Methods include standard SGD, RMSprop, and ADAM
 learning_method = 'RMSprop'
-#The hyper-parameters for the chosen learning method must also be provided
+#Hyper-parameters for the chosen learning method
 learning_rate = 0.0001
 decay_rate = 0.98
 damping = 1.0e-8
@@ -59,7 +51,7 @@ network_trainer = Trainer(network.get_network(), batch_size = batch_size,
 
 
 #Number of updates to train over
-num_updates = 1000
+num_updates = 10
 
 #Train the network
 train_error = network_trainer.train(training_data.get_data(), training_data.get_labels(), duration = num_updates)
