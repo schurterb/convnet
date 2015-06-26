@@ -6,10 +6,6 @@ Created on Wed Jun 24 06:35:06 2015
 
 Definition for creation of convolutional neural network
 """
-
-import sys
-from load_data import LoadData
-
 import theano
 from theano import tensor as T
 import numpy as np
