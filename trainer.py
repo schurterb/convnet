@@ -122,24 +122,39 @@ class Trainer(object):
         self.b = network[5]
         self.net_shape = network[6]
         
-        #Trainint parameters
+        #Training parameters
+        trainer_status = ""
         learning_method = kwargs.get('learning_method', 'standardSGD')
+        trainer_status += "learning_method = "+learning_method+"\n"
         self.print_updates = kwargs.get('print_updates', False)
         self.rng = kwargs.get('rng', np.random.RandomState(42))
-        self.batch_size = kwargs.get('batch_size', 1)
+        self.batch_size = kwargs.get('batch_size', 100)
+        trainer_status += "batch_size = "+`self.batch_size`+"\n"
         self.use_batches = kwargs.get('use_batches', True)
-        self.cost_func = kwargs.get('cost_func', 'MSE')
+        trainer_status += "use_batches = "+`self.use_batches`+"\n\n"
         self.lr = kwargs.get('learning_rate', 0.0001)
-        self.dr = kwargs.get('decay_rate', 0.99)
-        self.damp = kwargs.get('damping', 1.0e-08)
+        trainer_status += "learning rate = "+`self.lr`+"\n"
         self.b1 = kwargs.get('beta1', 0.9)
+        trainer_status += "beta 1 = "+`self.b1`+"\n"
         self.b2 = kwargs.get('beta2', 0.999)
+        trainer_status += "beta 2 = "+`self.b2`+"\n"
+        self.dr = kwargs.get('decay_rate', 0.99)
+        trainer_status += "decay rate = "+`self.dr`+"\n"
+        self.damp = kwargs.get('damping', 1.0e-08)
+        trainer_status += "damping term = "+`self.damp`+"\n\n"
+        trainer_status += "Network shape = "+`self.net_shape`+"\n"
+        
+        self.log_intervals = kwargs.get('log_intervals', 100)
+        self.log_folder = kwargs.get('log_folder', '')
         
         self.seg = int(self.net_shape.shape[0]*(self.net_shape[0,1] -1) +1)
         self.offset = (self.seg -1)/2    
         self.input_shape = (self.seg, self.seg, self.seg, self.batch_size)
         self.output_shape = (3, self.batch_size)
-     
+        
+        log_file = open(self.log_folder + 'trainer_log.txt', 'w')
+        log_file.write(trainer_status)
+        log_file.close()        
         
         #Initialize the list of updates to be performed
         self.__set_updates(learning_method)
@@ -178,6 +193,16 @@ class Trainer(object):
             Xsub[:,:,:,i] = train_set[xpos:xpos+self.seg, ypos:ypos+self.seg, zpos:zpos+self.seg]
                 
         return Xsub, Ysub
+        
+        
+    """
+    Log the trainining and weight values at regular intervals
+    """
+    def __log_status(self, error):
+        error.tofile(self.log_folder + 'learning_curve.csv', sep=',')
+        for i in range(0, self.net_shape.shape[0]):
+            self.w[i].get_value().tofile(self.log_folder + 'layer_'+`i`+'_weights.csv', sep=',')
+            self.b[i].get_value().tofile(self.log_folder + 'layer_'+`i`+'_bias.csv', sep=',')
     
     
     """   
@@ -214,9 +239,10 @@ class Trainer(object):
             
             if(self.print_updates):
                 print 'Cost at update '+`epoch`+': '+`train_error[epoch]`
+            
+            if((epoch+1)%self.log_intervals == 0):
+                self.__log_status(train_error[train_error > 0])
                 
-            #If the current error is sufficiently better than the original error, than
-            # let us stop
             if (epoch%averaging_len == 0) and (epoch >= averaging_len*2):
                 error_diff = np.mean(train_error[epoch - averaging_len*2:epoch-averaging_len]) - np.mean(train_error[epoch - averaging_len:epoch])
                 if(np.abs(error_diff) < early_stop):

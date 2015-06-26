@@ -12,7 +12,7 @@ from trainer import Trainer
 from load_data import LoadData
 
 
-results_folder = 'results/ADAM_batches/'
+results_folder = 'results/ADAM/'
 
 train_data_folder = 'nobackup/turaga/data/fibsem_medulla_7col/trvol-250-1-h5/'
 test_data_folder = 'nobackup/turaga/data/fibsem_medulla_7col/tstvol-520-1-h5/'
@@ -21,15 +21,15 @@ label_file = 'groundtruth_aff.h5'
 
 #Structural hyper-parameters
 num_layers = 5
-num_filters = 6
+num_filters = 20
 filter_size = 5 #This only one side of each filter, which are assumed to be cubic
 activation = 'relu'
 #cost_func = 'MSE'
 
 #Learning Methods include standard SGD, RMSprop, and ADAM
 learning_method = 'ADAM'
-batch_size = 20
-use_mini_batches = True
+batch_size = 100
+use_mini_batches = False
 num_updates = 10000
 
 #Hyper-parameters for the chosen learning method
@@ -53,7 +53,8 @@ network_trainer = Trainer(network.get_network(), batch_size = batch_size,
                           learning_method = learning_method,
                           learning_rate = learning_rate, beta1 = beta1,
                           beta2 = beta2, decay_rate = decay_rate,
-                          damping = damping, use_batches = use_mini_batches, 
+                          damping = damping, use_batches = use_mini_batches,
+                          log_folder = results_folder,
                           print_updates = print_updates)
 #------------------------------------------------------------------------------
 
