@@ -36,17 +36,30 @@ class CNN(object):
         self.w = w
         self.b = b
         
-    """Initialize the weights based on an input file"""
+    """
+    Initialize the weights based on an input file
+    If there are not enough weight files for the layers of the network, randomly
+    initialize the unaccounted for layers.    
+    """
     def __load_weights(self):
         
         #Initialize the filters and biases with stored values
         w = ()  #Weights
         b = ()  #Biases
         for layer in range(0, self.net_shape.shape[0]):
-            weights = np.genfromtxt(self.load_folder + 'layer_'+`layer`+'_weights.csv', delimiter=',')
-            w += (theano.shared(np.asarray(weights.reshape(self.net_shape[layer,:]), dtype=theano.config.floatX)) ,)
-            bias = np.genfromtxt(self.load_folder + 'layer_'+`layer`+'_bias.csv', delimiter=',')
-            b += (theano.shared(np.asarray(bias.reshape(self.net_shape[layer,0]), dtype=theano.config.floatX)) ,)
+            try:
+                weights = np.genfromtxt(self.load_folder + 'layer_'+`layer`+'_weights.csv', delimiter=',')
+                w += (theano.shared(np.asarray(weights.reshape(self.net_shape[layer,:]), dtype=theano.config.floatX)) ,)
+                bias = np.genfromtxt(self.load_folder + 'layer_'+`layer`+'_bias.csv', delimiter=',')
+                b += (theano.shared(np.asarray(bias.reshape(self.net_shape[layer,0]), dtype=theano.config.floatX)) ,)
+            
+            except: #If the specific weights file does not exist
+                im_size = (layer+1)*(self.net_shape[0,-1] -1) + 1
+                fan_in = self.net_shape[layer, 2] * (im_size**3)
+                fan_out = self.net_shape[layer, 0] * (self.net_shape[layer, 1]**3)
+                bound =np.sqrt(6. / (fan_in + fan_out))
+                w  += (theano.shared(np.asarray(self.rng.uniform(low= -bound, high= bound, size= self.net_shape[layer, :]), dtype=theano.config.floatX)) ,)
+                b += (theano.shared(np.asarray(np.ones(self.net_shape[layer, 0]), dtype=theano.config.floatX)) ,)
             
         self.w = w
         self.b = b

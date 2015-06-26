@@ -21,16 +21,16 @@ label_file = 'groundtruth_aff.h5'
 
 #Structural hyper-parameters
 num_layers = 5
-num_filters = 6
+num_filters = 20
 filter_size = 5 #This only one side of each filter, which are assumed to be cubic
 activation = 'relu'
 #cost_func = 'MSE'
 
 #Learning Methods include standard SGD, RMSprop, and ADAM
 learning_method = 'RMSprop'
-batch_size = 20
-use_mini_batches = True
-num_updates = 5000
+batch_size = 100
+use_mini_batches = False
+num_updates = 1000
 
 #Hyper-parameters for the chosen learning method
 learning_rate = 0.00001
