@@ -4,7 +4,7 @@ Created on Wed Jun 24 06:10:40 2015
 
 @author: schurterb
 
-Trainer function for a CNN using stochastic gradient descent.
+Trainer class for a CNN using stochastic gradient descent.
 """
 
 
@@ -16,14 +16,6 @@ theano.config.floatX = 'float32'
 
 
 class Trainer(object):
-    
-    """Define the cost function for calculating the updates"""
-    def __set_cost(self):
-        if (self.cost_func == 'class'):
-            self.cost = T.mean(T.nnet.binary_crossentropy(self.out, self.Y.dimshuffle(1,0,'x','x','x')))
-        else:
-            self.cost = T.mean(1/2.0*((self.out - self.Y.dimshuffle(1,0,'x','x','x'))**2)) 
-            
     
     """Define the updates to be performed each training round"""
     def __set_updates(self, learning_method):
@@ -37,8 +29,8 @@ class Trainer(object):
             self.rw = ()
             self.rb = ()
             for layer in range(0, len(self.w)):
-                self.rw = self.rw + (theano.shared(np.ones(self.w[layer].shape, dtype=theano.config.floatX)) ,)
-                self.rb = self.rb + (theano.shared(np.ones(self.w[layer].shape[0], dtype=theano.config.floatX)) ,)      
+                self.rw = self.rw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX)) ,)
+                self.rb = self.rb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX)) ,)      
             
             rw_updates = [
                 (r, (self.dr*r) + (1-self.dr)*grad**2)
@@ -67,10 +59,10 @@ class Trainer(object):
             self.vw = ()
             self.vb = ()
             for layer in range(0, len(self.w)):
-                self.mw = self.mw + (theano.shared(np.zeros(self.w[layer].shape, dtype=theano.config.floatX)) ,)
-                self.mb = self.mb + (theano.shared(np.zeros(self.w[layer].shape[0], dtype=theano.config.floatX)) ,)
-                self.vw = self.vw + (theano.shared(np.ones(self.w[layer].shape, dtype=theano.config.floatX)) ,)
-                self.vb = self.vb + (theano.shared(np.ones(self.w[layer].shape[0], dtype=theano.config.floatX)) ,)
+                self.mw = self.mw + (theano.shared(np.zeros(self.net_shape[layer,:], dtype=theano.config.floatX)) ,)
+                self.mb = self.mb + (theano.shared(np.zeros(self.net_shape[layer,0], dtype=theano.config.floatX)) ,)
+                self.vw = self.vw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX)) ,)
+                self.vb = self.vb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX)) ,)
             self.t = theano.shared(np.asarray(1, dtype=theano.config.floatX))
             
             mw_updates = [
@@ -125,9 +117,10 @@ class Trainer(object):
         self.X = network[0]
         self.Y = network[1]
         self.out = network[2]
-        self.w = network[3]
-        self.b = network[4]
-        self.net_shape = network[5]
+        self.cost = network[3]
+        self.w = network[4]
+        self.b = network[5]
+        self.net_shape = network[6]
         
         #Trainint parameters
         learning_method = kwargs.get('learning_method', 'standardSGD')
@@ -148,8 +141,7 @@ class Trainer(object):
         self.output_shape = (3, self.batch_size)
      
         
-        #Initialize the cost function and the list of updates to be performed
-        self.__set_cost()
+        #Initialize the list of updates to be performed
         self.__set_updates(learning_method)
         
         #Initialize the training function
@@ -159,22 +151,17 @@ class Trainer(object):
     Randomly select a batch_size array of samples to train for a given update.
     """
     def __get_samples(self, train_set, train_labels):
-        #Keep count of the number of positive and negative examples to keep their
-        # ratios even per 
-        num_pos = 0
-        num_neg = 0    
+          
         Xsub = np.zeros(self.input_shape)
         Ysub = np.zeros(self.output_shape)
         for i in range(0, self.batch_size):
             #For this update, randomly select whether this will be a positive or
             # a negative example
             sel = self.rng.randn(1)
-            if (sel > 0) and (num_pos/self.batch_size < 0.5):
+            if (sel > 0):
                 sel = 1
-                num_pos += 1
             else:
                 sel = 0
-                num_neg += 1
             #Draw a random sample to train on
             new_sample = self.rng.randint(0, train_set.shape[-1]-self.seg, 3)
             xpos = new_sample[0]

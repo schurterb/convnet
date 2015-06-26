@@ -7,6 +7,9 @@ Created on Wed Jun 24 06:35:06 2015
 Definition for creation of convolutional neural network
 """
 
+import sys
+from load_data import LoadData
+
 import theano
 from theano import tensor as T
 import numpy as np
@@ -126,7 +129,7 @@ class CNN(object):
         self.net_shape[-1,:] = [3, filter_size, num_filters, filter_size, filter_size]
         
         self.rng = kwargs.get('rng', np.random.RandomState(42))
-        self.load_folder = kwargs.get('load_folder', None)
+        self.load_folder = kwargs.get('weights_folder', None)
         self.activation = kwargs.get('activation', 'relu')
         self.cost_func = kwargs.get('cost_func', 'MSE')  
         
@@ -181,7 +184,9 @@ class CNN(object):
      as the shared weights and the shared biases
     """
     def get_network(self):
-        return [self.X, self.Y, self.out, self.w, self.b, self.net_shape]
+        return [self.X, self.Y, self.out, self.cost, self.w, self.b, self.net_shape]
         
-        
+
+
+
         

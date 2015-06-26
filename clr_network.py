@@ -12,7 +12,7 @@ from trainer import Trainer
 from load_data import LoadData
 
 
-results_folder = 'results/standardSGD_batch/'
+results_folder = 'results/standardSGD_batches/'
 
 train_data_folder = 'nobackup/turaga/data/fibsem_medulla_7col/trvol-250-1-h5/'
 test_data_folder = 'nobackup/turaga/data/fibsem_medulla_7col/tstvol-520-1-h5/'
@@ -28,8 +28,8 @@ activation = 'relu'
 
 #Learning Methods include standard SGD, RMSprop, and ADAM
 learning_method = 'standardSGD'
-batch_size = 100
-use_mini_batches = True
+batch_size = 10
+use_mini_batches = False
 num_updates = 10000
 
 #Hyper-parameters for the chosen learning method

@@ -12,7 +12,7 @@ from trainer import Trainer
 from load_data import LoadData
 
 
-results_folder = 'results/RMSprop_batch/'
+results_folder = 'results/RMSprop_batches/'
 
 train_data_folder = 'nobackup/turaga/data/fibsem_medulla_7col/trvol-250-1-h5/'
 test_data_folder = 'nobackup/turaga/data/fibsem_medulla_7col/tstvol-520-1-h5/'
@@ -28,9 +28,9 @@ activation = 'relu'
 
 #Learning Methods include standard SGD, RMSprop, and ADAM
 learning_method = 'RMSprop'
-batch_size = 100
+batch_size = 20
 use_mini_batches = True
-num_updates = 10000
+num_updates = 5000
 
 #Hyper-parameters for the chosen learning method
 learning_rate = 0.00001
@@ -49,6 +49,7 @@ network = CNN(num_layers = num_layers, num_filters = num_filters,
 
 #Create a trainer for the network
 network_trainer = Trainer(network.get_network(), batch_size = batch_size,
+                          learning_method = learning_method,
                           learning_rate = learning_rate, decay_rate = decay_rate,
                           damping = damping, use_batches = use_mini_batches, 
                           print_updates = print_updates)

@@ -44,6 +44,7 @@ damping = 1.0e-8
 
 #Create a trainer for the network
 network_trainer = Trainer(network.get_network(), batch_size = batch_size,
+                          learning_method = learning_method,
                           learning_rate = learning_rate, decay_rate = decay_rate,
                           damping = damping, use_batches = use_batches)
 #------------------------------------------------------------------------------
