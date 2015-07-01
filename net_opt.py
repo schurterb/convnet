@@ -9,17 +9,15 @@ Uses hyperopt library to optimize network structure.
 print 'loading modules'
 from trial_net import trial_net
 
-import pickle
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
-from hyperopt.mongoexp import MongoTrials
 
 print 'Initializing...'
 
 #Objective function to optimize
 def objective(x):
     return {
-            '#loss': trial_net(x),
-            'loss': (x[0]**2 + x[1]**3 + x[2]**4),
+            'loss': trial_net(x),
+            #'loss': (x[0]**2 + x[1]**3 + x[2]**4),
             'status': STATUS_OK,
             # --probably want more stuff to be returned--
             }
@@ -27,8 +25,8 @@ def objective(x):
 
 #Search space
 space = [hp.choice('nlayers', range(10, 15)),
-         hp.choice('nfilters', range(6, 15)),
-         hp.choice('fsizes', range(5, 7, 2))]
+         hp.choice('nfilters', range(10, 50)),
+         hp.choice('fsizes', range(5, 11, 2))]
          
         
 #Set the optimizer to use a mongo database
@@ -40,7 +38,7 @@ print 'Begin optimization'
 #Run the hyper optimization
 best_params = fmin(objective, space,
                    algo=tpe.suggest,
-                   max_evals=100,
+                   max_evals=200,
                    trials=trials)
                    
 print 'Optimization complete'

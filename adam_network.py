@@ -20,17 +20,17 @@ data_file = 'img_normalized.h5'
 label_file = 'groundtruth_aff.h5'
 
 #Structural hyper-parameters
-num_layers = 5
-num_filters = 20
-filter_size = 5 #This only one side of each filter, which are assumed to be cubic
+num_layers = 15
+num_filters = 10
+filter_size = 9 #This only one side of each filter, which are assumed to be cubic
 activation = 'relu'
 #cost_func = 'MSE'
 
 #Learning Methods include standard SGD, RMSprop, and ADAM
 learning_method = 'ADAM'
-batch_size = 100
+batch_size = 10
 use_mini_batches = False
-num_updates = 10000
+num_updates = 100
 
 #Hyper-parameters for the chosen learning method
 learning_rate = 0.0001
@@ -66,25 +66,28 @@ training_data = LoadData(directory = train_data_folder, data_file_name = data_fi
 
 
 #Train the network
-train_error = network_trainer.train(training_data.get_data(), training_data.get_labels(), 
+train_error, a, b = network_trainer.train(training_data.get_data(), training_data.get_labels(), 
                                     duration = num_updates, early_stop = early_stop)
 training_data.close()
 #------------------------------------------------------------------------------
 
 
-#Load the data for testing
-testing_data = LoadData(directory = test_data_folder, data_file_name = data_file,
-                         label_file_name = label_file)
-#------------------------------------------------------------------------------              
-   
-                      
-#Predict the affinity of the test set
-prediction = network.predict(testing_data.get_data())
-testing_data.close()
-#------------------------------------------------------------------------------
+##Load the data for testing
+#testing_data = LoadData(directory = test_data_folder, data_file_name = data_file,
+#                         label_file_name = label_file)
+##------------------------------------------------------------------------------              
+#   
+#                      
+##Predict the affinity of the test set
+#prediction = network.predict(testing_data.get_data())
+#testing_data.close()
+##------------------------------------------------------------------------------
 
 
 #Store all the results
-train_error.tofile(results_folder + 'learning_curve.csv', sep=',')
-prediction.tofile(results_folder + 'test_prediction.csv', sep=',')
-network.save_weights(results_folder)
+#train_error.tofile(results_folder + 'learning_curve.csv', sep=',')
+#prediction.tofile(results_folder + 'test_prediction.csv', sep=',')
+#network.save_weights(results_folder)
+
+print 'Sampling time = '+`a`
+print 'Training time = '+`b`

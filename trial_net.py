@@ -41,7 +41,7 @@ def trial_net(net_shape):
     early_stop = True
     
     print_updates = False
-    results_folder = 'results/net_opt_2/nl='+`num_layers`+'_nf='+`num_filters`+'_fs='+`filter_size`+'/'
+    results_folder = 'results/hyperopt/nl='+`num_layers`+'_nf='+`num_filters`+'_fs='+`filter_size`+'/'
     if not os.path.exists(results_folder): os.makedirs(results_folder)    
     
     print 'creating network'
@@ -67,9 +67,9 @@ def trial_net(net_shape):
     #------------------------------------------------------------------------------
     start_time = time.clock()
     #Train the network
-    train_error = network_trainer.train(training_data.get_data(), training_data.get_labels(), 
+    train_error, samp_time, train_time = network_trainer.train(training_data.get_data(), training_data.get_labels(), 
                                         duration = num_updates, early_stop = early_stop)
-    train_time = time.clock() - start_time
+    tot_train_time = time.clock() - start_time
     training_data.close()
     #------------------------------------------------------------------------------
     
@@ -79,16 +79,17 @@ def trial_net(net_shape):
                              label_file_name = label_file)
     #------------------------------------------------------------------------------              
                        
-    #Predict the affinity of the test set
+    #evaluate this network on a subset of the test set
     loss = network.loss(testing_data.get_data(), testing_data.get_labels())
     testing_data.close()
     #------------------------------------------------------------------------------
 
     network.save_weights(results_folder)
     train_error.tofile(results_folder + 'learning_curve.csv', sep=',')
-    train_time.tofile(results_folder + 'training_time.csv', sep=',')
+    #train_time.tofile(results_folder + 'training_time.csv', sep=',')
     f = open(results_folder + 'loss.txt')
-    f.write('test loss = '+`loss`)
+    f.write("test loss = "+`loss`+"\ntotal train time = "+`tot_train_time`
+            +"\nsampling time = "+`samp_time`+"\ntrain time = "+`train_time`)
     f.close()
     
     return loss

@@ -14,9 +14,11 @@ from theano import Out
 import numpy as np
 from theano.tensor.nnet.conv3d2d import conv3d
 
+
 #theano.config.allow_gc=False
 theano.config.floatX = 'float32'
-theano.sandbox.cuda.use('gpu')
+theano.sandbox.cuda.use('gpu1')
+
 
 class CNN(object):  
         
@@ -157,8 +159,8 @@ class CNN(object):
             self.__load_weights()
 
         #Input and Target variables for symbolic representation of network
-        self.X = T.ftensor4('X')
-        self.Y = T.fmatrix('Y')            
+        self.X = T.tensor4('X')
+        self.Y = T.matrix('Y')            
             
         #Create the network model
         self.__model()
@@ -167,7 +169,7 @@ class CNN(object):
         self.__set_cost()
         
         #Create a predicter based on this network model
-        self.predictor = theano.function(inputs=[self.X], outputs=Out(gpu_from_host(self.out), borrow=True), allow_input_downcast=True)
+        self.predictor = theano.function(inputs=[self.X], outputs=Out(self.out, borrow=True), allow_input_downcast=True)
         
         #Create a function to calculate the loss of this network
         self.eval_cost = theano.function(inputs=[self.X, self.Y], outputs=Out(gpu_from_host(self.cost), borrow=True), allow_input_downcast=True)
@@ -181,7 +183,7 @@ class CNN(object):
     """
     def predict(self, x):
         out_size = x.shape[0] - self.sample_size + 1
-        return np.asarray(self.predictor(x[:,:,:].reshape((x.shape) + (1 ,))).reshape((3, out_size, out_size, out_size)))
+        return np.asarray(self.predictor(x[:,:,:].reshape((x.shape) + (1 ,)))).reshape((3, out_size, out_size, out_size))
         
         
     """
@@ -190,12 +192,22 @@ class CNN(object):
             y must be a cubic 3D matrix consisting of per-pixel affinity labels
     Returns: scalar loss value
     """
-    def loss(self, x, y):
-        out_size = x.shape[0] - self.sample_size + 1
-        return np.asarray(self.eval_cost(x[:,:,:].reshape((x.shape) + (1 ,)), 
-                              y[:, self.offset:-self.offset,
-                                   self.offset:-self.offset,
-                                   self.offset:-self.offset].reshape((3, 1, out_size, out_size, out_size))))
+    def loss(self, x, y, test_batch_size):
+        offset = (self.sample_size -1)/2
+        
+        Ysub = np.zeros((3, test_batch_size))
+        Xsub = np.zeros((self.sample_size, self.sample_size, self.sample_size, test_batch_size))
+        for i in range(0, test_batch_size):
+            new_sample = self.rng.randint(0, x.shape[-1]-self.sample_size, 3)
+            xpos = new_sample[0]
+            ypos = new_sample[1]
+            zpos = new_sample[2]
+            Ysub[:, i] = y[:, xpos+offset, ypos+offset, zpos+offset]
+            Xsub[:,:,:, i] = x[xpos:xpos+self.sample_size, 
+                               ypos:ypos+self.sample_size,
+                               zpos:zpos+self.sample_size]
+        
+        return np.asarray(self.eval_cost(Xsub, Ysub))
 
 
     """
