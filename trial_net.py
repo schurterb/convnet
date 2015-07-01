@@ -41,14 +41,16 @@ def trial_net(net_shape):
     early_stop = True
     
     print_updates = False
-    results_folder = 'results/hyperopt/nl='+`num_layers`+'_nf='+`num_filters`+'_fs='+`filter_size`+'/'
+    results_folder = 'results/net_opt_2/nl='+`num_layers`+'_nf='+`num_filters`+'_fs='+`filter_size`+'/'
     if not os.path.exists(results_folder): os.makedirs(results_folder)    
     
+    print 'creating network'
     #Create the network to train
     network = CNN(num_layers = num_layers, num_filters = num_filters, 
                   filter_size = filter_size, activation = activation)
     #------------------------------------------------------------------------------
     
+    print 'training network'
     #Create a trainer for the network
     network_trainer = Trainer(network.get_network(), batch_size = batch_size,
                               learning_method = learning_method,
@@ -71,7 +73,7 @@ def trial_net(net_shape):
     training_data.close()
     #------------------------------------------------------------------------------
     
-    
+    print 'testing network'
     #Load the data for testing
     testing_data = LoadData(directory = test_data_folder, data_file_name = data_file,
                              label_file_name = label_file)
@@ -85,5 +87,8 @@ def trial_net(net_shape):
     network.save_weights(results_folder)
     train_error.tofile(results_folder + 'learning_curve.csv', sep=',')
     train_time.tofile(results_folder + 'training_time.csv', sep=',')
+    f = open(results_folder + 'loss.txt')
+    f.write('test loss = '+`loss`)
+    f.close()
     
     return loss

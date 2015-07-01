@@ -7,12 +7,19 @@ Created on Wed Jun 24 06:10:40 2015
 Trainer class for a CNN using stochastic gradient descent.
 """
 
+import time
 
 import theano
-import theano.tensor as T
+import theano.sandbox.cuda
+from theano.sandbox.cuda.basic_ops import gpu_from_host
+from theano import tensor as T
+from theano import Out
 import numpy as np
 
+
+#theano.config.allow_gc=False
 theano.config.floatX = 'float32'
+theano.sandbox.cuda.use('gpu')
 
 
 class Trainer(object):
@@ -160,15 +167,16 @@ class Trainer(object):
         self.__set_updates(learning_method)
         
         #Initialize the training function
-        self.train_model = theano.function(inputs=[self.X, self.Y], outputs=self.cost, updates=self.updates, allow_input_downcast=True)
+        self.train_model = theano.function(inputs=[self.X, self.Y], outputs=Out(gpu_from_host(self.cost), borrow=True), updates=self.updates, allow_input_downcast=True)
+    
     
     """
     Randomly select a batch_size array of samples to train for a given update.
     """
     def __get_samples(self, train_set, train_labels):
           
-        Xsub = np.zeros(self.input_shape)
-        Ysub = np.zeros(self.output_shape)
+        Ytemp = np.zeros(3)
+        samples = np.zeros(self.batch_size, dtype = 'int32')
         for i in range(0, self.batch_size):
             #For this update, randomly select whether this will be a positive or
             # a negative example
@@ -182,17 +190,24 @@ class Trainer(object):
             xpos = new_sample[0]
             ypos = new_sample[1]
             zpos = new_sample[2]
-            Ysub[:, i] = train_labels[:, xpos+self.offset, ypos+self.offset, zpos+self.offset]
-            while ((Ysub[:, i].sum() > 0) and (sel == 0)) or ((Ysub[:, i].sum() == 0) and (sel == 1)):    #Set the first half to be negative examples
+            Ytemp = train_labels[:, xpos+self.offset, ypos+self.offset, zpos+self.offset]
+            while ((Ytemp.sum() > 0) and (sel == 0)) or ((Ytemp.sum() == 0) and (sel == 1)):    #Set the first half to be negative examples
                 new_sample = self.rng.randint(0, train_set.shape[-1]-self.seg, 3)
                 xpos = new_sample[0]
                 ypos = new_sample[1]
                 zpos = new_sample[2]
-                Ysub[:, i] = train_labels[:, xpos+self.offset, ypos+self.offset, zpos+self.offset]
+                Ytemp = train_labels[:, xpos+self.offset, ypos+self.offset, zpos+self.offset]
+            
+            check = np.sum(self.prev_pos == [xpos, ypos, zpos], 1)
+            if np.sum(check == 3):
+                samples[i] = np.where(check == 3)[0][0]
+            else:
+                samples[i] = self.num_examples
+                self.Xsub[:,:,:, samples[i]] = train_set[xpos:xpos+self.seg, ypos:ypos+self.seg, zpos:zpos+self.seg]
+                self.Ysub[:, samples[i]] = Ytemp
+                self.num_examples += 1
                 
-            Xsub[:,:,:,i] = train_set[xpos:xpos+self.seg, ypos:ypos+self.seg, zpos:zpos+self.seg]
-                
-        return Xsub, Ysub
+        return samples
         
         
     """
@@ -215,6 +230,12 @@ class Trainer(object):
     """
     def train(self, train_set, train_labels, duration, early_stop = False):
 
+        #Variables to keep track of previously seen training examples
+        self.prev_pos = np.zeros((self.batch_size*duration, 3))
+        self.Xsub = np.zeros((self.seg, self.seg, self.seg, self.batch_size*duration))
+        self.Ysub = np.zeros((3, self.batch_size*duration))
+        self.num_examples = 0
+
         #Epochs to average over for early stopping
         averaging_len = 100
         if(early_stop):
@@ -223,18 +244,24 @@ class Trainer(object):
             early_stop = -1
         
         train_error = np.zeros(duration)
+        train_time = 0
+        samp_time = 0
         
         epoch = 0
         while(epoch < duration):
             
-            Xsub, Ysub = self.__get_samples(train_set, train_labels)
-                
+            samp_start = time.clock()
+            indeces = self.__get_samples(train_set, train_labels)
+            samp_time += time.clock() - samp_start
+            
             if(self.use_batches):
-                train_error[epoch] = self.train_model(Xsub, Ysub)
+                train_start = time.clock()
+                train_error[epoch] = np.asarray(self.train_model(self.Xsub[:,:,:,indeces], self.Ysub[:,indeces]))
+                train_time += time.clock() - train_start
             else:
                 epoch_error = np.zeros(self.batch_size)
-                for i in range(0, self.batch_size):
-                    epoch_error[i] = self.train_model(Xsub[:,:,:,i:i+1], Ysub[:,i:i+1])
+                for i in indeces:
+                    epoch_error[i] = np.asarray(self.train_model(self.Xsub[:,:,:,i:i+1], self.Ysub[:,i:i+1]))
                 train_error[epoch] = np.mean(epoch_error)
             
             if(self.print_updates):
@@ -250,5 +277,5 @@ class Trainer(object):
             
             epoch += 1
             
-        return train_error
+        return train_error, samp_time, train_time
             

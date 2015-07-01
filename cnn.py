@@ -7,12 +7,16 @@ Created on Wed Jun 24 06:35:06 2015
 Definition for creation of convolutional neural network
 """
 import theano
+import theano.sandbox.cuda
+from theano.sandbox.cuda.basic_ops import gpu_from_host
 from theano import tensor as T
+from theano import Out
 import numpy as np
 from theano.tensor.nnet.conv3d2d import conv3d
 
+#theano.config.allow_gc=False
 theano.config.floatX = 'float32'
-
+theano.sandbox.cuda.use('gpu')
 
 class CNN(object):  
         
@@ -35,6 +39,7 @@ class CNN(object):
         
         self.w = w
         self.b = b
+        
         
     """
     Initialize the weights based on an input file
@@ -64,11 +69,13 @@ class CNN(object):
         self.w = w
         self.b = b
         
+        
     """Save the weights to an output file"""
     def save_weights(self, folder):
         for i in range(0, self.net_shape.shape[0]):
             self.w[i].get_value().tofile(folder + 'layer_'+`i`+'_weights.csv', sep=',')
             self.b[i].get_value().tofile(folder + 'layer_'+`i`+'_bias.csv', sep=',')
+            
             
     """Define the network model"""
     def __model(self):
@@ -109,6 +116,7 @@ class CNN(object):
         #Reshuffle the dimensions so that the last three are the xyz dimensions
         # and the second one is the number of affinity graph types (for each dimension)
         self.out = out.dimshuffle(0, 2, 1, 3, 4)     
+        
         
     """Define the cost function used to evaluate this network"""
     def __set_cost(self):
@@ -159,10 +167,11 @@ class CNN(object):
         self.__set_cost()
         
         #Create a predicter based on this network model
-        self.predictor = theano.function(inputs=[self.X], outputs=self.out, allow_input_downcast=True)
+        self.predictor = theano.function(inputs=[self.X], outputs=Out(gpu_from_host(self.out), borrow=True), allow_input_downcast=True)
         
         #Create a function to calculate the loss of this network
-        self.eval_cost = theano.function(inputs=[self.X, self.Y], outputs=self.cost, allow_input_downcast=True)
+        self.eval_cost = theano.function(inputs=[self.X, self.Y], outputs=Out(gpu_from_host(self.cost), borrow=True), allow_input_downcast=True)
+       
        
     """
     Make a prediction on a set of inputs
@@ -172,7 +181,8 @@ class CNN(object):
     """
     def predict(self, x):
         out_size = x.shape[0] - self.sample_size + 1
-        return self.predictor(x[:,:,:].reshape((x.shape) + (1 ,))).reshape((3, out_size, out_size, out_size)) 
+        return np.asarray(self.predictor(x[:,:,:].reshape((x.shape) + (1 ,))).reshape((3, out_size, out_size, out_size)))
+        
         
     """
     Calculate the loss of the networks prediction based on a target output
@@ -182,10 +192,11 @@ class CNN(object):
     """
     def loss(self, x, y):
         out_size = x.shape[0] - self.sample_size + 1
-        return self.eval_cost(x[:,:,:].reshape((x.shape) + (1 ,)), 
+        return np.asarray(self.eval_cost(x[:,:,:].reshape((x.shape) + (1 ,)), 
                               y[:, self.offset:-self.offset,
                                    self.offset:-self.offset,
-                                   self.offset:-self.offset].reshape((3, 1, out_size, out_size, out_size)))
+                                   self.offset:-self.offset].reshape((3, 1, out_size, out_size, out_size))))
+
 
     """
     Return the network for training
