@@ -7,9 +7,9 @@ Created on Wed Jun 24 09:37:19 2015
 Function to create, train, and test convolutional neural network.
 """
 
-from cnn import CNN
-from trainer import Trainer
-from load_data import LoadData
+from cnn_old import CNN
+from trainer_old import Trainer
+from load_data_old import LoadData
 
 
 results_folder = 'results/test_results/'
