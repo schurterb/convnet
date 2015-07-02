@@ -1,0 +1,45 @@
+### Second round of tests on gpu improvement ###
+Changed learning system to load all necessary training examples to memory
+
+### CPU vs GPU test results ###
+
+Layers: 3
+Filters per layer: 5
+Filter size: 3
+
+Trained with ADAM
+for 100 batches
+with 10 examples per batch
+
+Training times:
+
+Using CPU:
+Initialization = 52.68 seconds
+Total Training Time = 1.26 seconds
+On GPU Training Time = 1.25 seconds
+
+Using GPU:
+Initialization = 28.47 seconds
+Total Training Time = 0.53 seconds
+On GPU Training Time = 0.53 seconds
+
+###############################################################################
+### With new network size ###
+
+Layers: 7
+Filters per layer: 20
+Filter size: 5
+
+Trained with ADAM
+for 100 batches
+with 10 examples per batch
+
+Training times:
+
+Using CPU:
+Initialization = 33.67 seconds
+Training Time > 1.5 hours
+
+Using GPU:
+Initialization = 51.72 seconds
+Training Time = 42.53 seconds

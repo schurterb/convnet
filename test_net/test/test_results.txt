@@ -1,0 +1,45 @@
+### CPU vs GPU test results ###
+
+Layers: 5
+Filters per layer: 6
+Filter size: 5
+
+Trained with ADAM
+for 100 batches
+with 10 examples per batch
+
+Training times:
+
+Using CPU:
+initialization = 13.17 seconds
+training time  = 352.62 seconds
+
+Using GPU:
+initialization = 29.31 seconds
+training time  = 155.68 seconds
+
+Using GPU and gpu_from_host():
+initialization = 24.69 seconds
+training time  = 154.03 seconds
+
+Using GPU, gpu_from_host(), and allow_gc=False:
+initialization = 24.85 seconds
+training time  = 154.25 seconds
+
+Using GPU, gpu_from_host(), and Out(:, borrow=True):
+Note - a missing input error prevented use of In on function inputs
+initialization = 24.59 seconds
+total_training time  = 154.26 seconds
+sampling time = 151.99 seconds
+theano train_model function = 2.24 seconds
+
+Note:
+    This suggests in transitioning from CPU to GPU, theano train_model function
+run time went from about 200 seconds to 2.24 seconds (89.3% speed increase)
+
+    Sampling time should scale linearly with the number of examples trained on.
+152 seconds / 1000 examples = 0.152 seconds per example
+Thus, 10000 examples would take 1520 seconds (25 minutes) to load
+And, 100000 examples would take 15200 seconds (250 minutes = 4 hours) to load
+
+
