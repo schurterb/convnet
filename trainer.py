@@ -17,7 +17,7 @@ from theano import Out
 import numpy as np
 
 
-#theano.config.allow_gc=False
+theano.config.allow_gc=False
 theano.config.floatX = 'float32'
 theano.sandbox.cuda.use('gpu1')
 
@@ -41,11 +41,11 @@ class Trainer(object):
                 self.rb = self.rb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX)) ,)      
             
             rw_updates = [
-                (r, (self.dr*r) + (1-self.dr)*grad**2)
+                (r, (self.b1*r) + (1-self.b1)*grad**2)
                 for r, grad in zip(self.rw, w_grads)                   
             ]
             rb_updates = [
-                (r, (self.dr*r) + (1-self.dr)*grad**2)
+                (r, (self.b1*r) + (1-self.b1)*grad**2)
                 for r, grad in zip(self.rb, b_grads)                   
             ]
             w_updates = [
@@ -146,8 +146,6 @@ class Trainer(object):
         trainer_status += "beta 1 = "+`self.b1`+"\n"
         self.b2 = kwargs.get('beta2', 0.999)
         trainer_status += "beta 2 = "+`self.b2`+"\n"
-        self.dr = kwargs.get('decay_rate', 0.99)
-        trainer_status += "decay rate = "+`self.dr`+"\n"
         self.damp = kwargs.get('damping', 1.0e-08)
         trainer_status += "damping term = "+`self.damp`+"\n\n"
         trainer_status += "Network shape = "+`self.net_shape`+"\n"

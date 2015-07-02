@@ -15,7 +15,8 @@ import numpy as np
 from theano.tensor.nnet.conv3d2d import conv3d
 
 
-#theano.config.allow_gc=False
+#theano.config.nvcc.flags='-use=fast=math'
+theano.config.allow_gc=False
 theano.config.floatX = 'float32'
 theano.sandbox.cuda.use('gpu1')
 
@@ -170,9 +171,10 @@ class CNN(object):
         
         #Create a predicter based on this network model
         self.predictor = theano.function(inputs=[self.X], outputs=Out(self.out, borrow=True), allow_input_downcast=True)
-        
+        #self.predictor = theano.function(inputs=[self.X], outputs=self.out, allow_input_downcast=True)
         #Create a function to calculate the loss of this network
         self.eval_cost = theano.function(inputs=[self.X, self.Y], outputs=Out(gpu_from_host(self.cost), borrow=True), allow_input_downcast=True)
+        #self.eval_cost = theano.function(inputs=[self.X, self.Y], outputs=self.cost, allow_input_downcast=True)
        
        
     """

@@ -8,12 +8,16 @@ A DeepTrainer uses the cnn and trainer classes to train deep networks
 layer-by-layer, thereby reducing the training time.
 """
 
-import os
 import time
-import numpy as np
+import theano
+import theano.sandbox.cuda
 from cnn import CNN
 from trainer import Trainer
 from load_data import LoadData
+
+
+theano.config.floatX = 'float32'
+theano.sandbox.cuda.use('gpu')
 
 
 class DeepTrainer(object):
@@ -28,13 +32,13 @@ class DeepTrainer(object):
         
         self.results_folder = kwargs.get('results_folder', '')
         self.train_dir = kwargs.get('train_directory', '')
-        self.train_data_file = kwargs.get('train_data_File', 'train_data.csv')
+        self.train_data_file = kwargs.get('train_data_file', 'train_data.csv')
         self.train_label_file = kwargs.get('train_label_file', 'train_labels.csv')
         self.test_dir = kwargs.get('test_directory', '')
-        self.test_data_file = kwargs.get('test_data_File', 'train_data.csv')
+        self.test_data_file = kwargs.get('test_data_file', 'train_data.csv')
         self.test_label_file = kwargs.get('test_label_file', 'train_labels.csv')
         
-        self.train_data = LoadData(directory = self.data_dir,
+        self.train_data = LoadData(directory = self.train_dir,
                                    data_file_name = self.train_data_file,
                                    label_file_name = self.train_label_file)
         self.test_data = LoadData(directory = self.test_dir,
@@ -131,7 +135,7 @@ class DeepTrainer(object):
     """
     def train(self):
         
-        for nl in range(2, len(self.num_layers)+1):
+        for nl in range(2, self.num_layers+1):
             self.__train_layer(nl)
         
         #Generate the network to train
