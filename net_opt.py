@@ -24,8 +24,8 @@ def objective(x):
 
 
 #Search space
-space = [hp.choice('nlayers', range(10, 15)),
-         hp.choice('nfilters', range(10, 50)),
+space = [hp.choice('nlayers', range(8, 15)),
+         hp.choice('nfilters', range(10, 50, 2)),
          hp.choice('fsizes', range(5, 11, 2))]
          
         
@@ -38,7 +38,7 @@ print 'Begin optimization'
 #Run the hyper optimization
 best_params = fmin(objective, space,
                    algo=tpe.suggest,
-                   max_evals=200,
+                   max_evals=150,
                    trials=trials)
                    
 print 'Optimization complete'

@@ -20,23 +20,21 @@ data_file = 'img_normalized.h5'
 label_file = 'groundtruth_aff.h5'
 
 #Structural hyper-parameters
-num_layers = 15
-num_filters = 10
-filter_size = 9 #This only one side of each filter, which are assumed to be cubic
+num_layers = 5
+num_filters = 6
+filter_size = 5 #This only one side of each filter, which are assumed to be cubic
 activation = 'relu'
 #cost_func = 'MSE'
 
 #Learning Methods include standard SGD, RMSprop, and ADAM
 learning_method = 'ADAM'
 batch_size = 10
-use_mini_batches = False
 num_updates = 100
 
 #Hyper-parameters for the chosen learning method
-learning_rate = 0.0001
-beta1 = 0.9
-beta2 = 0.999
-decay_rate = 1 - 1.0e-08
+learning_rate = 0.00001
+beta1 = 0.95
+beta2 = 0.9
 damping = 1.0e-8
 early_stop = True
 
@@ -52,8 +50,7 @@ network = CNN(num_layers = num_layers, num_filters = num_filters,
 network_trainer = Trainer(network.get_network(), batch_size = batch_size,
                           learning_method = learning_method,
                           learning_rate = learning_rate, beta1 = beta1,
-                          beta2 = beta2, decay_rate = decay_rate,
-                          damping = damping, use_batches = use_mini_batches,
+                          beta2 = beta2, damping = damping,
                           log_folder = results_folder,
                           print_updates = print_updates)
 #------------------------------------------------------------------------------

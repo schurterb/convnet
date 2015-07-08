@@ -19,7 +19,7 @@ import numpy as np
 
 theano.config.allow_gc=False
 theano.config.floatX = 'float32'
-theano.sandbox.cuda.use('gpu1')
+theano.sandbox.cuda.use('gpu0')
 
 
 class Trainer(object):
@@ -120,7 +120,7 @@ class Trainer(object):
      its cost function (second parameter), its shared weight and bias 
      variables (second and third parameters, rspectively)
     """
-    def __init__(self, network, **kwargs):
+    def __init__(self, network, train_data, train_labels, **kwargs):
         #Network parameters
         self.X = network[0]
         self.Y = network[1]
@@ -150,7 +150,7 @@ class Trainer(object):
         trainer_status += "damping term = "+`self.damp`+"\n\n"
         trainer_status += "Network shape = "+`self.net_shape`+"\n"
         
-        self.log_intervals = kwargs.get('log_intervals', 100)
+        self.log_interval = kwargs.get('log_interval', 100)
         self.log_folder = kwargs.get('log_folder', '')
         
         self.seg = int(self.net_shape.shape[0]*(self.net_shape[0,1] -1) +1)
@@ -165,83 +165,84 @@ class Trainer(object):
         #Initialize the list of updates to be performed
         self.__set_updates(learning_method)
         
-        #Initialize the training function
-        self.train_model = theano.function(inputs=[self.X, self.Y], outputs=Out(gpu_from_host(self.cost), borrow=True), updates=self.updates, allow_input_downcast=True)
-    
-    
-#    """
-#    Randomly select a batch_size array of samples to train for a given update.
-#    """
-#    def __get_samples(self, train_set, train_labels):
-#          
-#        Ytemp = np.zeros(3)
-#        samples = np.zeros(self.batch_size, dtype = 'int32')
-#        for i in range(0, self.batch_size):
-#            #For this update, randomly select whether this will be a positive or
-#            # a negative example
-#            sel = self.rng.randn(1)
-#            if (sel > 0):
-#                sel = 1
-#            else:
-#                sel = 0
-#            #Draw a random sample to train on
-#            new_sample = self.rng.randint(0, train_set.shape[-1]-self.seg, 3)
-#            xpos = new_sample[0]
-#            ypos = new_sample[1]
-#            zpos = new_sample[2]
-#            Ytemp = train_labels[:, xpos+self.offset, ypos+self.offset, zpos+self.offset]
-#            while ((Ytemp.sum() > 0) and (sel == 0)) or ((Ytemp.sum() == 0) and (sel == 1)):    #Set the first half to be negative examples
-#                new_sample = self.rng.randint(0, train_set.shape[-1]-self.seg, 3)
-#                xpos = new_sample[0]
-#                ypos = new_sample[1]
-#                zpos = new_sample[2]
-#                Ytemp = train_labels[:, xpos+self.offset, ypos+self.offset, zpos+self.offset]
-#            
-#            check = np.sum(self.prev_pos == [xpos, ypos, zpos], 1)
-#            if np.sum(check == 3):
-#                samples[i] = np.where(check == 3)[0][0]
-#            else:
-#                samples[i] = self.num_examples
-#                self.Xsub[:,:,:, samples[i]] = train_set[xpos:xpos+self.seg, ypos:ypos+self.seg, zpos:zpos+self.seg]
-#                self.Ysub[:, samples[i]] = Ytemp
-#                self.num_examples += 1
-#                
-#        return samples
-    
-    """
-    Randomly select a batch_size array of samples to train for a given update.
-    """
-    def __get_samples(self, train_set, train_labels):
-          
-        Xsub = np.zeros(self.input_shape)
-        Ysub = np.zeros(self.output_shape)
-        for i in range(0, self.batch_size):
-            #For this update, randomly select whether this will be a positive or
-            # a negative example
-            sel = self.rng.randn(1)
-            if (sel > 0):
-                sel = 1
-            else:
-                sel = 0
-            #Draw a random sample to train on
-            new_sample = self.rng.randint(0, train_set.shape[-1]-self.seg, 3)
-            xpos = new_sample[0]
-            ypos = new_sample[1]
-            zpos = new_sample[2]
-            Ysub[:,i] = train_labels[:, xpos+self.offset, ypos+self.offset, zpos+self.offset]
-            while ((Ysub[:,i].sum() > 0) and (sel == 0)) or ((Ysub[:,i].sum() == 0) and (sel == 1)):    #Set the first half to be negative examples
-                new_sample = self.rng.randint(0, train_set.shape[-1]-self.seg, 3)
-                xpos = new_sample[0]
-                ypos = new_sample[1]
-                zpos = new_sample[2]
-                Ysub[:,i] = train_labels[:, xpos+self.offset, ypos+self.offset, zpos+self.offset]
-            
-
-            Xsub[:,:,:, i] = train_set[xpos:xpos+self.seg, ypos:ypos+self.seg, zpos:zpos+self.seg]
-
-                
-        return Xsub, Ysub
+        #Load the training set into memory
+        self.__load_training_data(train_data, train_labels)
         
+        #Initialize the training functiona
+        self.__theano_training_model()
+    
+    
+    """
+    Define the function for GPU training
+    """
+    def __theano_training_model(self):
+        #Store training error in shared memory as well
+        self.error = theano.shared(np.zeros(1, dtype=theano.config.floatX))
+        self.update_counter = theano.shared(np.zeros(1, dtype='int32')) 
+        
+        self.Xsub = theano.shared(np.zeros(self.input_shape,
+                                  dtype = theano.config.floatX), name='Xsub')
+        self.Ysub = theano.shared(np.zeros(self.output_shape, 
+                                  dtype = theano.config.floatX), name='Ysub')
+                                  
+        log_updates = [
+            (self.error, T.set_subtensor(self.error[0], self.cost)),
+            (self.update_counter, self.update_counter +1),
+        ]
+        self.updates = log_updates + self.updates
+                                               
+        self.train_model = theano.function(inputs=[], outputs=[],
+                                           updates = self.updates,
+                                           givens = [(self.X, self.Xsub),
+                                                     (self.Y, self.Ysub)],
+                                           allow_input_downcast=True)
+                                           
+
+    """
+    Load all the training samples needed for training this network. Ensure that
+    there are about equal numbers of positive and negative examples.
+    """
+    def __load_training_data(self, train_set, train_labels):
+          
+        #Load all the training data into the GPUs memore
+        self.training_data = theano.shared(train_set[:,:,:])#, dtype=theano.config.floatX)
+        self.training_labels = theano.shared(train_labels[:,:,:,:])#, dtype=theano.config.floatX)
+        self.data_size = self.training_data.get_value(borrow=True).shape[-1]
+        
+        #List all the positions of negative labels
+        side_len = self.training_data.get_value(borrow=True).shape[0]
+        negative_samples = []
+        for i in range(0, side_len-self.seg):
+            for j in range(0, side_len-self.seg):
+                for k in range(0, side_len-self.seg):
+                    if(self.training_labels.get_value(borrow=True)[:,i+self.offset, j+self.offset, k+self.offset].sum() == 0):
+                        negative_samples += [[i, j, k]]
+        
+        self.negatives = np.asarray(negative_samples, dtype='int32')
+        
+
+    """
+    Set the training examples for this batch
+    """
+    def __set_batch(self):
+        Xtemp = np.zeros(self.input_shape, dtype = theano.config.floatX)
+        Ytemp = np.zeros(self.output_shape, dtype = theano.config.floatX)
+        for i in range(0, self.batch_size):
+            sel = self.rng.randn(1)
+            if (sel > 0):   #Search for a positive example. They are common.
+                sample = self.rng.randint(0, self.data_size - self.seg, 3)
+                while np.sum(np.sum(self.negatives == sample, 1) == 3):
+                    sample = self.rng.randint(0, self.data_size - self.seg, 3)
+            else:           #Select a negative example from the known negatives, rather than searching for them.
+                sel = self.rng.randint(0, self.negatives.shape[0], 1)[0]
+                sample = self.negatives[sel]
+                    
+            Xtemp[:,:,:,i] = self.training_data.get_value(borrow=True, return_internal_type=True)[sample[0]:sample[0] +self.seg, sample[1]:sample[1] +self.seg, sample[2]:sample[2] +self.seg]
+            Ytemp[:,i] = self.training_labels.get_value(borrow=True, return_internal_type=True)[:, sample[0]+self.offset, sample[1]+self.offset, sample[2]+self.offset]
+
+        self.Xsub.set_value(Xtemp, borrow=True)
+        self.Ysub.set_value(Ytemp, borrow=True)
+    
         
     """
     Log the trainining and weight values at regular intervals
@@ -261,48 +262,29 @@ class Trainer(object):
      each batch.        
     Returns: network cost at each update
     """
-    def train(self, train_set, train_labels, duration, early_stop = False):
-
-#        #Variables to keep track of previously seen training examples
-#        self.prev_pos = np.zeros((self.batch_size*duration, 3))
-#        self.Xsub = np.ndarray((self.seg, self.seg, self.seg, self.batch_size*duration))
-#        self.Ysub = np.ndarray((3, self.batch_size*duration))
-#        self.num_examples = 0
+    def train(self, duration, early_stop = False):
 
         #Epochs to average over for early stopping
-        averaging_len = 100
+        averaging_len = self.log_interval
         if(early_stop):
             early_stop = 0.0001
         else:
             early_stop = -1
         
         train_error = np.zeros(duration)
-        train_time = 0
-        samp_time = 0
         
         epoch = 0
         while(epoch < duration):
             
-            samp_start = time.clock()
-            Xsub, Ysub = self.__get_samples(train_set, train_labels)
-            samp_time += time.clock() - samp_start
+            self.__set_batch()
+            self.train_model()            
             
-            if(self.use_batches):
-                train_start = time.clock()
-                train_error[epoch] = np.asarray(self.train_model(Xsub, Ysub))
-                train_time += time.clock() - train_start
-            else:
-                epoch_error = np.zeros(self.batch_size)
-                for i in range(0, self.batch_size):
-                    train_start = time.clock()
-                    epoch_error[i] = np.asarray(self.train_model(Xsub[:,:,:,i:i+1], Ysub[:,i:i+1]))
-                    train_time += time.clock() - train_start
-                train_error[epoch] = np.mean(epoch_error)
+            train_error[epoch] = self.error.get_value(borrow=True)
             
             if(self.print_updates):
                 print 'Cost at update '+`epoch`+': '+`train_error[epoch]`
             
-            if((epoch+1)%self.log_intervals == 0):
+            if((epoch+1)%self.log_interval == 0):
                 self.__log_status(train_error[train_error > 0])
                 
             if (epoch%averaging_len == 0) and (epoch >= averaging_len*2):
@@ -312,5 +294,5 @@ class Trainer(object):
             
             epoch += 1
             
-        return train_error, samp_time, train_time
+        return train_error
             
