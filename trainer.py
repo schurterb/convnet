@@ -145,12 +145,12 @@ class Trainer(object):
                 
         scan_vals = [
             (self.index, self.batch_counter - (self.update_counter*self.batch_size) ),
-            (self.Xsub, T.set_subtensor(self.Xsub[:,:,:,self.index[0]], self.training_data[self.samples[0, self.index[0]]:self.samples[0, self.index[0]] +self.seg, 
-                                                                                           self.samples[1, self.index[0]]:self.samples[1, self.index[0]] +self.seg, 
-                                                                                           self.samples[2, self.index[0]]:self.samples[2, self.index[0]] +self.seg]) ),
-            (self.Ysub, T.set_subtensor(self.Ysub[:,self.index[0]], self.training_labels[:, self.samples[0, self.index[0]]+self.offset, 
-                                                                                            self.samples[1, self.index[0]]+self.offset, 
-                                                                                            self.samples[2, self.index[0]]+self.offset]) ),
+            (self.Xsub, T.set_subtensor(self.Xsub[:,:,:,self.index[0]], self.training_data[self.samples[0, self.batch_counter[0]]:self.samples[0, self.batch_counter[0]] +self.seg, 
+                                                                                           self.samples[1, self.batch_counter[0]]:self.samples[1, self.batch_counter[0]] +self.seg, 
+                                                                                           self.samples[2, self.batch_counter[0]]:self.samples[2, self.batch_counter[0]] +self.seg]) ),
+            (self.Ysub, T.set_subtensor(self.Ysub[:,self.index[0]], self.training_labels[:, self.samples[0, self.batch_counter[0]]+self.offset, 
+                                                                                            self.samples[1, self.batch_counter[0]]+self.offset, 
+                                                                                            self.samples[2, self.batch_counter[0]]+self.offset]) ),
             (self.batch_counter, self.batch_counter+1)
         ]
         outputs, x_updates = theano.scan(lambda:scan_vals, n_steps=self.batch_size)
@@ -277,8 +277,8 @@ class Trainer(object):
     Set the training examples for this batch
     """
     def __get_examples(self):
-        samples = np.zeros(self.output_shape, dtype = theano.config.floatX)
-        for i in range(0, self.output_shape[1]):
+        samples = np.zeros((3, self.batch_size*self.log_interval), dtype = 'int32')
+        for i in range(0, self.batch_size*self.log_interval):
             sel = self.rng.randn(1)
             if (sel > 0):   #Search for a positive example. They are common.
                 sample = self.rng.randint(0, self.data_size - self.seg, 3)
@@ -322,6 +322,7 @@ class Trainer(object):
         train_error = np.zeros((duration/self.log_interval, self.log_interval))
         
         epoch = 0
+        train_init = time.clock()
         while(epoch < duration/self.log_interval):
                        
             self.reset_counters()
@@ -342,6 +343,11 @@ class Trainer(object):
                   epoch = duration
             
             epoch += 1
+        train_time = time.clock() - train_init
+        
+        log_file = open(self.log_folder + 'trainer_log.txt', 'a')
+        log_file.write("\nTraining Time = "+`train_time`)
+        log_file.close()
             
         return train_error
             

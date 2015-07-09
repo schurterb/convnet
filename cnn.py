@@ -20,7 +20,7 @@ from theano.tensor.nnet.conv3d2d import conv3d
 theano.config.nvcc.flags='-use=fast=math'
 theano.config.allow_gc=False
 theano.config.floatX = 'float32'
-theano.sandbox.cuda.use('gpu1')
+theano.sandbox.cuda.use('gpu0')
 
 
 class CNN(object):  
@@ -130,9 +130,9 @@ class CNN(object):
     """Define the cost function used to evaluate this network"""
     def __set_cost(self):
         if (self.cost_func == 'class'):
-            self.cost = T.mean(T.nnet.binary_crossentropy(self.out, self.Y.dimshuffle(1,0,'x','x','x')))
+            self.cost = T.mean(T.nnet.binary_crossentropy(self.out, self.Y.dimshuffle(1,0,'x','x','x')), dtype=theano.config.floatX)
         else:
-            self.cost = T.mean(1/2.0*((self.out - self.Y.dimshuffle(1,0,'x','x','x'))**2))        
+            self.cost = T.mean(1/2.0*((self.out - self.Y.dimshuffle(1,0,'x','x','x'))**2), dtype=theano.config.floatX)        
         
         
     """Initialize the network"""
