@@ -6,6 +6,8 @@ Created on Wed Jun 24 06:35:06 2015
 
 Definition for creation of convolutional neural network
 """
+import sys
+
 import theano
 import theano.sandbox.cuda
 from theano.sandbox.cuda.basic_ops import gpu_from_host
@@ -15,10 +17,10 @@ import numpy as np
 from theano.tensor.nnet.conv3d2d import conv3d
 
 
-#theano.config.nvcc.flags='-use=fast=math'
+theano.config.nvcc.flags='-use=fast=math'
 theano.config.allow_gc=False
 theano.config.floatX = 'float32'
-theano.sandbox.cuda.use('gpu0')
+theano.sandbox.cuda.use('gpu1')
 
 
 class CNN(object):  
@@ -27,19 +29,23 @@ class CNN(object):
     def __init_weights(self):
 
         #Initialize the filters and biases (with random values)
-        im_size =  self.net_shape.shape[0]*(self.net_shape[0, -1] - 1) + 1
+        im_size =  self.num_layers*(self.filter_size - 1) + 1
         w = ()  #Weights
         b = ()  #Biases
-        for layer in range(0,  self.net_shape.shape[0]):
+        weight_size = 0
+        for layer in range(0,  self.num_layers):
             #The weights are initialized within the optimum range for a tanh
             # activation function
             fan_in = self.net_shape[layer, 2] * (im_size**3)
             fan_out = self.net_shape[layer, 0] * (self.net_shape[layer, 1]**3)
             bound =np.sqrt(6. / (fan_in + fan_out))
-            w  += (theano.shared(np.asarray(self.rng.uniform(low= -bound, high= bound, size= self.net_shape[layer, :]), dtype=theano.config.floatX)) ,)
-            b += (theano.shared(np.asarray(np.ones(self.net_shape[layer, 0]), dtype=theano.config.floatX)) ,)
-            im_size = im_size - self.net_shape[layer, -1] + 1
-        
+            w  += (theano.shared(np.asarray(self.rng.uniform(low= -bound, high= bound, size= self.net_shape[layer, :]), dtype=theano.config.floatX), name='w'+`layer`) ,)
+            b += (theano.shared(np.asarray(np.ones(self.net_shape[layer, 0]), dtype=theano.config.floatX), name='b'+`layer`) ,)
+            im_size = im_size - self.filter_size + 1
+            weight_size += sys.getsizeof(w[-1].get_value(borrow=True)[0,0,0,0,0])*w[-1].get_value(borrow=True).size/(1024.0*1024.0)
+            weight_size += sys.getsizeof(b[-1].get_value(borrow=True)[0])*w[-1].get_value(borrow=True).size/(1024.0*1024.0)
+            
+        #print 'Size of all weights = '+`weight_size`+' MB'
         self.w = w
         self.b = b
         
@@ -54,20 +60,20 @@ class CNN(object):
         #Initialize the filters and biases with stored values
         w = ()  #Weights
         b = ()  #Biases
-        for layer in range(0, self.net_shape.shape[0]):
+        for layer in range(0, self.num_layers):
             try:
                 weights = np.genfromtxt(self.load_folder + 'layer_'+`layer`+'_weights.csv', delimiter=',')
-                w += (theano.shared(np.asarray(weights.reshape(self.net_shape[layer,:]), dtype=theano.config.floatX)) ,)
+                w += (theano.shared(np.asarray(weights.reshape(self.net_shape[layer,:]), dtype=theano.config.floatX), name='w'+`layer`) ,)
                 bias = np.genfromtxt(self.load_folder + 'layer_'+`layer`+'_bias.csv', delimiter=',')
-                b += (theano.shared(np.asarray(bias.reshape(self.net_shape[layer,0]), dtype=theano.config.floatX)) ,)
+                b += (theano.shared(np.asarray(bias.reshape(self.net_shape[layer,0]), dtype=theano.config.floatX), name='b'+`layer`) ,)
             
             except: #If the specific weights file does not exist
-                im_size = (layer+1)*(self.net_shape[0,-1] -1) + 1
+                im_size = (self.num_layers - layer)*(self.filter_size -1) + 1
                 fan_in = self.net_shape[layer, 2] * (im_size**3)
                 fan_out = self.net_shape[layer, 0] * (self.net_shape[layer, 1]**3)
                 bound =np.sqrt(6. / (fan_in + fan_out))
-                w  += (theano.shared(np.asarray(self.rng.uniform(low= -bound, high= bound, size= self.net_shape[layer, :]), dtype=theano.config.floatX)) ,)
-                b += (theano.shared(np.asarray(np.ones(self.net_shape[layer, 0]), dtype=theano.config.floatX)) ,)
+                w  += (theano.shared(np.asarray(self.rng.uniform(low= -bound, high= bound, size= self.net_shape[layer, :]), dtype=theano.config.floatX), name='w'+`layer`) ,)
+                b += (theano.shared(np.asarray(np.ones(self.net_shape[layer, 0]), dtype=theano.config.floatX), name='b'+`layer`) ,)
             
         self.w = w
         self.b = b
@@ -132,21 +138,21 @@ class CNN(object):
     """Initialize the network"""
     def __init__(self, **kwargs):
         
-        num_layers = kwargs.get('num_layers', 3)
-        num_filters = kwargs.get('num_filters', 6)
-        filter_size = kwargs.get('filter_size', 3)
+        self.num_layers = kwargs.get('num_layers', 3)
+        self.num_filters = kwargs.get('num_filters', 6)
+        self.filter_size = kwargs.get('filter_size', 3)
         
-        self.sample_size = num_layers*(filter_size-1) + 1
+        self.sample_size = self.num_layers*(self.filter_size-1) + 1
         
         #Define the network shape
-        self.net_shape = np.ndarray([num_layers, 5])
+        self.net_shape = np.ndarray([self.num_layers, 5])
         #Define the first layer
-        self.net_shape[0,:] = [num_filters, filter_size, 1, filter_size, filter_size]
+        self.net_shape[0,:] = [self.num_filters, self.filter_size, 1, self.filter_size, self.filter_size]
         #Define all internal layers
-        for i in range(1, num_layers-1):    #Network cannot be smaller than 2 layers
-            self.net_shape[i,:] = [num_filters, filter_size, num_filters, filter_size, filter_size]
+        for i in range(1, self.num_layers-1):    #Network cannot be smaller than 2 layers
+            self.net_shape[i,:] = [self.num_filters, self.filter_size, self.num_filters, self.filter_size, self.filter_size]
         #Define the output layer            
-        self.net_shape[-1,:] = [3, filter_size, num_filters, filter_size, filter_size]
+        self.net_shape[-1,:] = [3, self.filter_size, self.num_filters, self.filter_size, self.filter_size]
         
         self.rng = kwargs.get('rng', np.random.RandomState(42))
         self.load_folder = kwargs.get('weights_folder', None)

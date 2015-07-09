@@ -104,7 +104,7 @@ class Analyzer(object):
     def __load_results(self, results_folder):
         try:
             lr_curve = np.genfromtxt(results_folder + 'learning_curve.csv', delimiter=',')
-            self.learning_curve += (np.mean(lr_curve[lr_curve > 0].reshape((10,-1)), 0) ,)
+            self.learning_curve += (np.mean(lr_curve[lr_curve > 0].reshape((1,-1)), 0) ,)
         except:
             self.learning_curve += (None ,)
             print 'Error: Unable to load learning curve.'

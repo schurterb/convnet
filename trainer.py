@@ -16,29 +16,29 @@ from theano import tensor as T
 from theano import Out
 import numpy as np
 
-
+theano.config.nvcc.flags='-use=fast=math'
 theano.config.allow_gc=False
 theano.config.floatX = 'float32'
-theano.sandbox.cuda.use('gpu0')
+theano.sandbox.cuda.use('gpu1')
 
 
 class Trainer(object):
     
     
     """Define the updates to be performed each training round"""
-    def __set_updates(self, learning_method):
+    def __perform_updates(self):
         
         w_grads = T.grad(self.cost, self.w)       
         b_grads = T.grad(self.cost, self.b)
         
-        if(learning_method == 'RMSprop'):
+        if(self.learning_method == 'RMSprop'):
             
             #Initialize shared variable to store MS of gradient btw updates
             self.rw = ()
             self.rb = ()
             for layer in range(0, len(self.w)):
-                self.rw = self.rw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX)) ,)
-                self.rb = self.rb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX)) ,)      
+                self.rw = self.rw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX), name='rw'+`layer`) ,)
+                self.rb = self.rb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX), name='rb'+`layer`) ,)      
             
             rw_updates = [
                 (r, (self.b1*r) + (1-self.b1)*grad**2)
@@ -58,7 +58,7 @@ class Trainer(object):
             ]    
             self.updates = rw_updates + rb_updates + w_updates + b_updates
             
-        elif(learning_method == 'ADAM'):
+        elif(self.learning_method == 'ADAM'):
             
             #Initialize shared variable to store the momentum and the 
             # variance terms btw updates
@@ -67,10 +67,10 @@ class Trainer(object):
             self.vw = ()
             self.vb = ()
             for layer in range(0, len(self.w)):
-                self.mw = self.mw + (theano.shared(np.zeros(self.net_shape[layer,:], dtype=theano.config.floatX)) ,)
-                self.mb = self.mb + (theano.shared(np.zeros(self.net_shape[layer,0], dtype=theano.config.floatX)) ,)
-                self.vw = self.vw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX)) ,)
-                self.vb = self.vb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX)) ,)
+                self.mw = self.mw + (theano.shared(np.zeros(self.net_shape[layer,:], dtype=theano.config.floatX), name='mw'+`layer`) ,)
+                self.mb = self.mb + (theano.shared(np.zeros(self.net_shape[layer,0], dtype=theano.config.floatX), name='mb'+`layer`) ,)
+                self.vw = self.vw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX), name='vw'+`layer`) ,)
+                self.vb = self.vb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX), name='vb'+`layer`) ,)
             self.t = theano.shared(np.asarray(1, dtype=theano.config.floatX))
             
             mw_updates = [
@@ -114,6 +114,82 @@ class Trainer(object):
             ]    
             self.updates = w_updates + b_updates
             
+            
+    """
+    Record the cost for the current batch
+    """
+    def __set_log(self):
+        self.error = theano.shared(np.zeros(self.log_interval, dtype=theano.config.floatX), name='error')
+        self.update_counter = theano.shared(np.zeros(1, dtype='int32'), name='update_counter') 
+                                        
+        log_updates = [
+            (self.error, T.set_subtensor(self.error[self.update_counter], self.cost)),
+            (self.update_counter, self.update_counter +1),
+        ]
+        self.updates = log_updates + self.updates
+    
+    
+    """
+    Set the training examples for the current batch based on the sample values
+    """
+    def __load_batch(self): 
+        self.samples = theano.shared(np.zeros((3, self.batch_size*self.log_interval), 
+                                     dtype = 'int32'), name='samples')
+        self.batch_counter = theano.shared(np.zeros(1, dtype='int32'), name='batch_counter') 
+        self.index = theano.shared(np.zeros(1, dtype='int32'), name='index')                
+        
+        self.Xsub = theano.shared(np.zeros(self.input_shape,
+                                  dtype = theano.config.floatX), name='Xsub')
+        self.Ysub = theano.shared(np.zeros(self.output_shape, 
+                                  dtype = theano.config.floatX), name='Ysub')
+                
+        scan_vals = [
+            (self.index, self.batch_counter - (self.update_counter*self.batch_size) ),
+            (self.Xsub, T.set_subtensor(self.Xsub[:,:,:,self.index[0]], self.training_data[self.samples[0, self.index[0]]:self.samples[0, self.index[0]] +self.seg, 
+                                                                                           self.samples[1, self.index[0]]:self.samples[1, self.index[0]] +self.seg, 
+                                                                                           self.samples[2, self.index[0]]:self.samples[2, self.index[0]] +self.seg]) ),
+            (self.Ysub, T.set_subtensor(self.Ysub[:,self.index[0]], self.training_labels[:, self.samples[0, self.index[0]]+self.offset, 
+                                                                                            self.samples[1, self.index[0]]+self.offset, 
+                                                                                            self.samples[2, self.index[0]]+self.offset]) ),
+            (self.batch_counter, self.batch_counter+1)
+        ]
+        outputs, x_updates = theano.scan(lambda:scan_vals, n_steps=self.batch_size)
+        self.updates = x_updates + self.updates 
+    
+    
+    """
+    Loop through the specified number of updates strictly using the GPU before
+    reporting back to log the current status
+    """
+    def __update_loop(self):
+        
+        outputs, self.updates = theano.scan(lambda x, y: self.updates, non_sequences = [self.X, self.Y], n_steps=self.log_interval)
+
+    
+    """
+    Define the function for GPU training
+    """
+    def __theano_training_model(self):
+        print 'setting updates'
+        self.__perform_updates()
+        print 'setting logger'
+        self.__set_log()
+        print 'setting batches'
+        self.__load_batch()
+        print 'defining loops'
+        self.__update_loop()
+        print 'preparing function'
+        examples = T.imatrix('examples')
+        self.train_model = theano.function(inputs=[examples], outputs=[],
+                                           updates = self.updates,
+                                           givens = [(self.samples, examples),
+                                                     (self.X, self.Xsub),
+                                                     (self.Y, self.Ysub)],
+                                           allow_input_downcast=True)
+                                
+        self.reset_counters = theano.function(inputs=[], outputs=[], updates=[(self.batch_counter, [0]), (self.update_counter, [0])])
+            
+            
     """
     Network must be a list constaining the key components of the network
      to be trained, namely its symbolic theano reprentation (first parameter),
@@ -122,24 +198,30 @@ class Trainer(object):
     """
     def __init__(self, network, train_data, train_labels, **kwargs):
         #Network parameters
-        self.X = network[0]
-        self.Y = network[1]
-        self.out = network[2]
-        self.cost = network[3]
-        self.w = network[4]
-        self.b = network[5]
-        self.net_shape = network[6]
+        self.X = network.X
+        self.Y = network.Y
+        self.out = network.out
+        self.cost = network.cost
+        self.w = network.w
+        self.b = network.b
+        self.net_shape = network.net_shape
         
         #Training parameters
-        trainer_status = ""
-        learning_method = kwargs.get('learning_method', 'standardSGD')
-        trainer_status += "learning_method = "+learning_method+"\n"
+        trainer_status = "### Convolutional Network Trainer Log ###\n\n"
+        trainer_status += "Network Parameters\n"
+        trainer_status += "num layers = "+ `network.num_layers` +"\n"
+        trainer_status += "num filters = "+ `network.num_filters` +"\n"
+        trainer_status += "filter size = "+ `network.filter_size` +"\n"        
+        trainer_status += "activation = "+ `network.activation` +"\n"
+        trainer_status += "cost function = "+ `network.cost_func` +"\n\n"
+        
+        trainer_status += "Trainer Parameters\n"
+        self.learning_method = kwargs.get('learning_method', 'standardSGD')
+        trainer_status += "learning method = "+self.learning_method+"\n"
         self.print_updates = kwargs.get('print_updates', False)
         self.rng = kwargs.get('rng', np.random.RandomState(42))
         self.batch_size = kwargs.get('batch_size', 100)
-        trainer_status += "batch_size = "+`self.batch_size`+"\n"
-        self.use_batches = kwargs.get('use_batches', True)
-        trainer_status += "use_batches = "+`self.use_batches`+"\n\n"
+        trainer_status += "batch size = "+`self.batch_size`+"\n"
         self.lr = kwargs.get('learning_rate', 0.0001)
         trainer_status += "learning rate = "+`self.lr`+"\n"
         self.b1 = kwargs.get('beta1', 0.9)
@@ -148,7 +230,6 @@ class Trainer(object):
         trainer_status += "beta 2 = "+`self.b2`+"\n"
         self.damp = kwargs.get('damping', 1.0e-08)
         trainer_status += "damping term = "+`self.damp`+"\n\n"
-        trainer_status += "Network shape = "+`self.net_shape`+"\n"
         
         self.log_interval = kwargs.get('log_interval', 100)
         self.log_folder = kwargs.get('log_folder', '')
@@ -160,43 +241,14 @@ class Trainer(object):
         
         log_file = open(self.log_folder + 'trainer_log.txt', 'w')
         log_file.write(trainer_status)
-        log_file.close()        
-        
-        #Initialize the list of updates to be performed
-        self.__set_updates(learning_method)
-        
+        log_file.close()
+               
         #Load the training set into memory
         self.__load_training_data(train_data, train_labels)
         
-        #Initialize the training functiona
+        #Initialize the training function
         self.__theano_training_model()
-    
-    
-    """
-    Define the function for GPU training
-    """
-    def __theano_training_model(self):
-        #Store training error in shared memory as well
-        self.error = theano.shared(np.zeros(1, dtype=theano.config.floatX))
-        self.update_counter = theano.shared(np.zeros(1, dtype='int32')) 
-        
-        self.Xsub = theano.shared(np.zeros(self.input_shape,
-                                  dtype = theano.config.floatX), name='Xsub')
-        self.Ysub = theano.shared(np.zeros(self.output_shape, 
-                                  dtype = theano.config.floatX), name='Ysub')
-                                  
-        log_updates = [
-            (self.error, T.set_subtensor(self.error[0], self.cost)),
-            (self.update_counter, self.update_counter +1),
-        ]
-        self.updates = log_updates + self.updates
-                                               
-        self.train_model = theano.function(inputs=[], outputs=[],
-                                           updates = self.updates,
-                                           givens = [(self.X, self.Xsub),
-                                                     (self.Y, self.Ysub)],
-                                           allow_input_downcast=True)
-                                           
+                                            
 
     """
     Load all the training samples needed for training this network. Ensure that
@@ -224,10 +276,9 @@ class Trainer(object):
     """
     Set the training examples for this batch
     """
-    def __set_batch(self):
-        Xtemp = np.zeros(self.input_shape, dtype = theano.config.floatX)
-        Ytemp = np.zeros(self.output_shape, dtype = theano.config.floatX)
-        for i in range(0, self.batch_size):
+    def __get_examples(self):
+        samples = np.zeros(self.output_shape, dtype = theano.config.floatX)
+        for i in range(0, self.output_shape[1]):
             sel = self.rng.randn(1)
             if (sel > 0):   #Search for a positive example. They are common.
                 sample = self.rng.randint(0, self.data_size - self.seg, 3)
@@ -236,12 +287,9 @@ class Trainer(object):
             else:           #Select a negative example from the known negatives, rather than searching for them.
                 sel = self.rng.randint(0, self.negatives.shape[0], 1)[0]
                 sample = self.negatives[sel]
-                    
-            Xtemp[:,:,:,i] = self.training_data.get_value(borrow=True, return_internal_type=True)[sample[0]:sample[0] +self.seg, sample[1]:sample[1] +self.seg, sample[2]:sample[2] +self.seg]
-            Ytemp[:,i] = self.training_labels.get_value(borrow=True, return_internal_type=True)[:, sample[0]+self.offset, sample[1]+self.offset, sample[2]+self.offset]
-
-        self.Xsub.set_value(Xtemp, borrow=True)
-        self.Ysub.set_value(Ytemp, borrow=True)
+            
+            samples[:,i] = sample
+        return samples
     
         
     """
@@ -271,18 +319,19 @@ class Trainer(object):
         else:
             early_stop = -1
         
-        train_error = np.zeros(duration)
+        train_error = np.zeros((duration/self.log_interval, self.log_interval))
         
         epoch = 0
-        while(epoch < duration):
+        while(epoch < duration/self.log_interval):
+                       
+            self.reset_counters()
             
-            self.__set_batch()
-            self.train_model()            
+            self.train_model(self.__get_examples())           
             
             train_error[epoch] = self.error.get_value(borrow=True)
             
             if(self.print_updates):
-                print 'Cost at update '+`epoch`+': '+`train_error[epoch]`
+                print 'Cost over updates '+`epoch*self.log_interval`+' - '+`(epoch+1)*self.log_interval`+' : '+`np.mean(train_error[epoch])`
             
             if((epoch+1)%self.log_interval == 0):
                 self.__log_status(train_error[train_error > 0])
