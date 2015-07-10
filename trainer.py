@@ -7,13 +7,9 @@ Created on Wed Jun 24 06:10:40 2015
 Trainer class for a CNN using stochastic gradient descent.
 """
 
-import time
-
 import theano
 import theano.sandbox.cuda
-from theano.sandbox.cuda.basic_ops import gpu_from_host
 from theano import tensor as T
-from theano import Out
 import numpy as np
 
 theano.config.nvcc.flags='-use=fast=math'
@@ -155,8 +151,8 @@ class Trainer(object):
         ]
         outputs, x_updates = theano.scan(lambda:scan_vals, n_steps=self.batch_size)
         self.updates = x_updates + self.updates 
-    
-    
+        
+        
     """
     Loop through the specified number of updates strictly using the GPU before
     reporting back to log the current status
@@ -165,25 +161,26 @@ class Trainer(object):
         
         outputs, self.updates = theano.scan(lambda x, y: self.updates, non_sequences = [self.X, self.Y], n_steps=self.log_interval)
 
-    
+  
     """
     Define the function for GPU training
     """
     def __theano_training_model(self):
-        print 'setting updates'
+        
         self.__perform_updates()
-        print 'setting logger'
+        
         self.__set_log()
-        print 'setting batches'
+        
         self.__load_batch()
-        print 'defining loops'
-        self.__update_loop()
-        print 'preparing function'
-        examples = T.imatrix('examples')
-        self.train_model = theano.function(inputs=[examples], outputs=[],
+        
+#        #Using this update loop can speed up computation; however, it also uses a significant amount of GPU memory,
+#        # which prevents extremely large networks from being trained.
+#        self.__update_loop()
+        
+        
+        self.train_model = theano.function(inputs=[], outputs=[],
                                            updates = self.updates,
-                                           givens = [(self.samples, examples),
-                                                     (self.X, self.Xsub),
+                                           givens = [(self.X, self.Xsub),
                                                      (self.Y, self.Ysub)],
                                            allow_input_downcast=True)
                                 
@@ -214,12 +211,12 @@ class Trainer(object):
         trainer_status += "filter size = "+ `network.filter_size` +"\n"        
         trainer_status += "activation = "+ `network.activation` +"\n"
         trainer_status += "cost function = "+ `network.cost_func` +"\n\n"
+                
+        self.rng = kwargs.get('rng', np.random.RandomState(42))        
         
         trainer_status += "Trainer Parameters\n"
         self.learning_method = kwargs.get('learning_method', 'standardSGD')
         trainer_status += "learning method = "+self.learning_method+"\n"
-        self.print_updates = kwargs.get('print_updates', False)
-        self.rng = kwargs.get('rng', np.random.RandomState(42))
         self.batch_size = kwargs.get('batch_size', 100)
         trainer_status += "batch size = "+`self.batch_size`+"\n"
         self.lr = kwargs.get('learning_rate', 0.0001)
@@ -257,8 +254,8 @@ class Trainer(object):
     def __load_training_data(self, train_set, train_labels):
           
         #Load all the training data into the GPUs memore
-        self.training_data = theano.shared(train_set[:,:,:])#, dtype=theano.config.floatX)
-        self.training_labels = theano.shared(train_labels[:,:,:,:])#, dtype=theano.config.floatX)
+        self.training_data = theano.shared(train_set[:,:,:], borrow=True)
+        self.training_labels = theano.shared(train_labels[:,:,:,:], borrow=True)
         self.data_size = self.training_data.get_value(borrow=True).shape[-1]
         
         #List all the positions of negative labels
@@ -289,7 +286,7 @@ class Trainer(object):
                 sample = self.negatives[sel]
             
             samples[:,i] = sample
-        return samples
+        self.samples.set_value(samples, borrow=True)
     
         
     """
@@ -310,7 +307,7 @@ class Trainer(object):
      each batch.        
     Returns: network cost at each update
     """
-    def train(self, duration, early_stop = False):
+    def train(self, duration, early_stop = False, print_updates = True):
 
         #Epochs to average over for early stopping
         averaging_len = self.log_interval
@@ -322,32 +319,27 @@ class Trainer(object):
         train_error = np.zeros((duration/self.log_interval, self.log_interval))
         
         epoch = 0
-        train_init = time.clock()
         while(epoch < duration/self.log_interval):
                        
             self.reset_counters()
-            
-            self.train_model(self.__get_examples())           
+            self.__get_examples()
+
+            for i in range(0, self.log_interval):
+                self.train_model()      
             
             train_error[epoch] = self.error.get_value(borrow=True)
             
-            if(self.print_updates):
+            if(print_updates):
                 print 'Cost over updates '+`epoch*self.log_interval`+' - '+`(epoch+1)*self.log_interval`+' : '+`np.mean(train_error[epoch])`
             
-            if((epoch+1)%self.log_interval == 0):
-                self.__log_status(train_error[train_error > 0])
+            self.__log_status(train_error[train_error > 0])
                 
-            if (epoch%averaging_len == 0) and (epoch >= averaging_len*2):
+            if early_stop:
                 error_diff = np.mean(train_error[epoch - averaging_len*2:epoch-averaging_len]) - np.mean(train_error[epoch - averaging_len:epoch])
                 if(np.abs(error_diff) < early_stop):
                   epoch = duration
             
             epoch += 1
-        train_time = time.clock() - train_init
-        
-        log_file = open(self.log_folder + 'trainer_log.txt', 'a')
-        log_file.write("\nTraining Time = "+`train_time`)
-        log_file.close()
             
         return train_error
             

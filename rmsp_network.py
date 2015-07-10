@@ -8,11 +8,11 @@ Training a network with ADAM and no mini-batches
 """
 
 from cnn import CNN
-from trainer import Trainer
+from trainer2 import Trainer
 from load_data import LoadData
 
 
-results_folder = 'results/RMSprop/'
+results_folder = 'results/RMSprop_5/'
 
 train_data_folder = 'nobackup/turaga/data/fibsem_medulla_7col/trvol-250-1-h5/'
 test_data_folder = 'nobackup/turaga/data/fibsem_medulla_7col/tstvol-520-1-h5/'
@@ -22,7 +22,7 @@ label_file = 'groundtruth_aff.h5'
 #Structural hyper-parameters
 num_layers = 10
 num_filters = 10
-filter_size = 5 #This only one side of each filter, which are assumed to be cubic
+filter_size = 7 #This only one side of each filter, which are assumed to be cubic
 activation = 'relu'
 #cost_func = 'MSE'
 
