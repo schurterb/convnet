@@ -12,7 +12,7 @@ from trainer import Trainer
 from load_data import LoadData
 
 
-results_folder = 'results/ADAM_1/'
+results_folder = 'results/ADAM_3/'
 
 train_data_folder = 'nobackup/turaga/data/fibsem_medulla_7col/trvol-250-1-h5/'
 test_data_folder = 'nobackup/turaga/data/fibsem_medulla_7col/tstvol-520-1-h5/'
@@ -20,9 +20,9 @@ data_file = 'img_normalized.h5'
 label_file = 'groundtruth_aff.h5'
 
 #Structural hyper-parameters
-num_layers = 6
-num_filters = 10
-filter_size = 9 #This only one side of each filter, which are assumed to be cubic
+num_layers = 15
+num_filters = 25
+filter_size = 3 #This only one side of each filter, which are assumed to be cubic
 activation = 'relu'
 #cost_func = 'MSE'
 

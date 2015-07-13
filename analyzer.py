@@ -101,9 +101,9 @@ class Analyzer(object):
             
     
     """Load the learning curve from a folder"""
-    def __load_results(self, results_folder):
+    def __load_results(self, results_folder, lc_name='learning_curve', pred_name='prediction'):
         try:
-            lr_curve = np.genfromtxt(results_folder + 'learning_curve.csv', delimiter=',')
+            lr_curve = np.genfromtxt(results_folder + lc_name + '.csv', delimiter=',')
             #self.learning_curve += (np.mean(lr_curve[lr_curve > 0].reshape((1,-1)), 0) ,)
             self.learning_curve += (lr_curve ,)
         except:
@@ -111,17 +111,16 @@ class Analyzer(object):
             print 'Error: Unable to load learning curve.'
 
         try:
-            self.pred_file += (h5py.File(results_folder + 'test_prediction.h5', 'r') ,)
-            self.prediction += (self.pred_file[-1][results_folder.split('/')[-2]] ,)
+            self.pred_file += (h5py.File(results_folder + pred_name + '.h5', 'r') ,)
+            self.prediction += (self.pred_file[-1]['main'] ,)
         except:
             self.prediction += (None ,)
             print 'Error: Unable to load test prediction.'
-#            
+            
     
     def __init__(self, **kwargs):
         
         self.nsteps = kwargs.get('threshold_steps', 10) 
-        self.name = (kwargs.get('name', '') ,)
         self.crop = kwargs.get('image_crop', 0)
         
         self.accuracy = ()
@@ -136,21 +135,34 @@ class Analyzer(object):
         self.pred_file = ()
         self.learning_curve = ()
         self.prediction = ()
-        
-        self.__load_results(results_folder)
-        
+                
         self.target = kwargs.get('target', None)
         self.raw = kwargs.get('raw', None)
         
-        if (self.target != None) and (self.prediction[-1] != None):
+        if (results_folder != None):
+            self.name = (kwargs.get('name', '') ,)
+            self.__load_results(results_folder)
             self.__threshold_scan()
+        else:
+            self.name = ()
+
+            
             
         
     """Add more than one set of results to analyze at a time""" 
     def add_results(self, **kwargs):
                 
         results_folder = kwargs.get('results_folder', None)
-        self.__load_results(results_folder)
+        prediction_name = kwargs.get('prediction_file', None)
+        learning_name = kwargs.get('learning_curve_file', None)
+        if (prediction_name == None) and (learning_name == None):
+            self.__load_results(results_folder)
+        elif (learning_name == None):
+            self.__load_results(results_folder, pred_name = prediction_name)
+        elif (prediction_name == None):
+            self.__load_results(results_folder, lc_name = learning_name)
+        else:
+            self.__load_results(results_folder, learning_name, prediction_name)
         
         self.name += (kwargs.get('name', '') ,)
         
@@ -204,41 +216,29 @@ class Analyzer(object):
         
         
     """Plots the learning curves"""
-    def learning(self):  
+    def learning(self, averaging_segment):  
         num_curves = len(self.learning_curve)
         n_figs = num_curves/7   #There can be seven unique auto-generated line colors
         rem_curves = num_curves%7
-        if self.name != None:
-            assert len(self.name) == num_curves
-            for f in range(0, n_figs):
-                plt.figure()
-                for i in range(0, 7):
-                    if (self.learning_curve[i] != None):
-                        plt.plot(self.learning_curve[f*7 + i].reshape(self.learning_curve[f*7 + i].size), label=self.name[f*7 + i])
-                plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=2, borderaxespad=0., prop={'size':20})
-                plt.grid()
-            if(rem_curves > 0):
-                plt.figure()
-                for i in range(0, len(self.learning_curve[-rem_curves::])):
-                    if (self.learning_curve[i] != None):
-                        plt.plot(self.learning_curve[n_figs*7 + i].reshape(self.learning_curve[n_figs*7 + i].size), label=self.name[n_figs*7 + i])
-                plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=2, borderaxespad=0., prop={'size':20})
-                plt.grid()
-        else:
-            for f in range(0, n_figs):
-                plt.figure()
-                for i in range(0, 7):
-                    if (self.learning_curve[i] != None):
-                        plt.plot(self.learning_curve[f*7 + i].reshape(self.learning_curve[f*7 + i].size), label='curve '+`f*7 + i`)
-                plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=2, borderaxespad=0., prop={'size':20})
-                plt.grid()
-            if(rem_curves > 0):
-                plt.figure()
-                for i in range(0, len(self.learning_curve[-rem_curves::])):
-                    if (self.learning_curve[i] != None):
-                        plt.plot(self.learning_curve[n_figs*7 + i].reshape(self.learning_curve[n_figs*7 + i].size), label='curve '+`f*7 + i`)
-                plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=2, borderaxespad=0., prop={'size':20})
-                plt.grid()
+        
+        assert len(self.name) == num_curves
+        for f in range(0, n_figs):
+            plt.figure()
+            for i in range(0, 7):
+                if (self.learning_curve[i] != None):
+                    lc = np.mean(self.learning_curve[f*7 + i].reshape(-1, averaging_segment), 1)
+                    plt.plot(lc, label=self.name[f*7 + i])
+            plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=2, borderaxespad=0., prop={'size':20})
+            plt.grid()
+        if(rem_curves > 0):
+            plt.figure()
+            for i in range(0, len(self.learning_curve[-rem_curves::])):
+                if (self.learning_curve[i] != None):
+                    lc = np.mean(self.learning_curve[n_figs*7 + i].reshape(-1, averaging_segment), 1)
+                    plt.plot(lc, label=self.name[n_figs*7 + i])
+            plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=2, borderaxespad=0., prop={'size':20})
+            plt.grid()
+
     
     
     """Plots the data from threshold_scan"""

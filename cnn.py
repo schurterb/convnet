@@ -15,39 +15,47 @@ from theano import tensor as T
 from theano import Out
 import numpy as np
 from theano.tensor.nnet.conv3d2d import conv3d
+import h5py
 
 
 theano.config.nvcc.flags='-use=fast=math'
 theano.config.allow_gc=False
 theano.config.floatX = 'float32'
-theano.sandbox.cuda.use('gpu1')
+theano.sandbox.cuda.use('gpu0')
 
 
-class CNN(object):  
+class CNN(object): 
+    
+    """Define the shape of the network as a 2D array"""
+    def __define_network(self):
+        self.sample_size = self.num_layers*(self.filter_size-1) + 1
+        #Define the network shape
+        self.net_shape = np.ndarray([self.num_layers, 5])
+        #Define the first layer
+        self.net_shape[0,:] = [self.num_filters, self.filter_size, 1, self.filter_size, self.filter_size]
+        #Define all internal layers
+        for i in range(1, self.num_layers-1):    #Network cannot be smaller than 2 layers
+            self.net_shape[i,:] = [self.num_filters, self.filter_size, self.num_filters, self.filter_size, self.filter_size]
+        #Define the output layer            
+        self.net_shape[-1,:] = [3, self.filter_size, self.num_filters, self.filter_size, self.filter_size]
         
+          
     """Randomly initialize the weights"""
     def __init_weights(self):
 
         #Initialize the filters and biases (with random values)
         im_size =  self.num_layers*(self.filter_size - 1) + 1
-        w = ()  #Weights
-        b = ()  #Biases
-        weight_size = 0
+        self.w = ()  #Weights
+        self.b = ()  #Biases
         for layer in range(0,  self.num_layers):
             #The weights are initialized within the optimum range for a tanh
             # activation function
             fan_in = self.net_shape[layer, 2] * (im_size**3)
             fan_out = self.net_shape[layer, 0] * (self.net_shape[layer, 1]**3)
             bound =np.sqrt(6. / (fan_in + fan_out))
-            w  += (theano.shared(np.asarray(self.rng.uniform(low= -bound, high= bound, size= self.net_shape[layer, :]), dtype=theano.config.floatX), name='w'+`layer`) ,)
-            b += (theano.shared(np.asarray(np.ones(self.net_shape[layer, 0]), dtype=theano.config.floatX), name='b'+`layer`) ,)
+            self.w  += (theano.shared(np.asarray(self.rng.uniform(low= -bound, high= bound, size= self.net_shape[layer, :]), dtype=theano.config.floatX), name='w'+`layer`) ,)
+            self.b += (theano.shared(np.asarray(np.ones(self.net_shape[layer, 0]), dtype=theano.config.floatX), name='b'+`layer`) ,)
             im_size = im_size - self.filter_size + 1
-            weight_size += sys.getsizeof(w[-1].get_value(borrow=True)[0,0,0,0,0])*w[-1].get_value(borrow=True).size/(1024.0*1024.0)
-            weight_size += sys.getsizeof(b[-1].get_value(borrow=True)[0])*w[-1].get_value(borrow=True).size/(1024.0*1024.0)
-            
-        #print 'Size of all weights = '+`weight_size`+' MB'
-        self.w = w
-        self.b = b
         
         
     """
@@ -58,27 +66,33 @@ class CNN(object):
     def __load_weights(self):
         
         #Initialize the filters and biases with stored values
-        w = ()  #Weights
-        b = ()  #Biases
-        for layer in range(0, self.num_layers):
+        weights = ()
+        biases = ()
+        found_layer = True
+        self.num_layers = 0
+        while found_layer:
             try:
-                weights = np.genfromtxt(self.load_folder + 'layer_'+`layer`+'_weights.csv', delimiter=',')
-                w += (theano.shared(np.asarray(weights.reshape(self.net_shape[layer,:]), dtype=theano.config.floatX), name='w'+`layer`) ,)
-                bias = np.genfromtxt(self.load_folder + 'layer_'+`layer`+'_bias.csv', delimiter=',')
-                b += (theano.shared(np.asarray(bias.reshape(self.net_shape[layer,0]), dtype=theano.config.floatX), name='b'+`layer`) ,)
-            
-            except: #If the specific weights file does not exist
-                im_size = (self.num_layers - layer)*(self.filter_size -1) + 1
-                fan_in = self.net_shape[layer, 2] * (im_size**3)
-                fan_out = self.net_shape[layer, 0] * (self.net_shape[layer, 1]**3)
-                bound =np.sqrt(6. / (fan_in + fan_out))
-                w  += (theano.shared(np.asarray(self.rng.uniform(low= -bound, high= bound, size= self.net_shape[layer, :]), dtype=theano.config.floatX), name='w'+`layer`) ,)
-                b += (theano.shared(np.asarray(np.ones(self.net_shape[layer, 0]), dtype=theano.config.floatX), name='b'+`layer`) ,)
-            
-        self.w = w
-        self.b = b
+                weights += (np.genfromtxt(self.load_folder + 'layer_'+`self.num_layers`+'_weights.csv', delimiter=',') ,)
+                biases += (np.genfromtxt(self.load_folder + 'layer_'+`self.num_layers`+'_bias.csv', delimiter=',') ,)
+                self.num_layers += 1
+            except:
+                found_layer = False
+                
+        assert len(weights) == len(biases)
         
+        self.num_filters = biases[0].size
         
+        self.filter_size = int(np.round((weights[0].size/self.num_filters) ** (1/3.0)))
+        
+        self.__define_network()
+                
+        self.w = ()  
+        self.b = () 
+        for layer in range(0, self.num_layers):
+            self.w += (theano.shared(np.asarray(weights[layer].reshape(self.net_shape[layer,:]), dtype=theano.config.floatX), name='w'+`layer`) ,)
+            self.b += (theano.shared(np.asarray(biases[layer].reshape(self.net_shape[layer,0]), dtype=theano.config.floatX), name='b'+`layer`) ,)
+    
+    
     """Save the weights to an output file"""
     def save_weights(self, folder):
         for i in range(0, self.net_shape.shape[0]):
@@ -138,21 +152,9 @@ class CNN(object):
     """Initialize the network"""
     def __init__(self, **kwargs):
         
-        self.num_layers = kwargs.get('num_layers', 3)
-        self.num_filters = kwargs.get('num_filters', 6)
-        self.filter_size = kwargs.get('filter_size', 3)
-        
-        self.sample_size = self.num_layers*(self.filter_size-1) + 1
-        
-        #Define the network shape
-        self.net_shape = np.ndarray([self.num_layers, 5])
-        #Define the first layer
-        self.net_shape[0,:] = [self.num_filters, self.filter_size, 1, self.filter_size, self.filter_size]
-        #Define all internal layers
-        for i in range(1, self.num_layers-1):    #Network cannot be smaller than 2 layers
-            self.net_shape[i,:] = [self.num_filters, self.filter_size, self.num_filters, self.filter_size, self.filter_size]
-        #Define the output layer            
-        self.net_shape[-1,:] = [3, self.filter_size, self.num_filters, self.filter_size, self.filter_size]
+        self.num_layers = kwargs.get('num_layers', None)
+        self.num_filters = kwargs.get('num_filters', None)
+        self.filter_size = kwargs.get('filter_size', None)
         
         self.rng = kwargs.get('rng', np.random.RandomState(42))
         self.load_folder = kwargs.get('weights_folder', None)
@@ -161,7 +163,13 @@ class CNN(object):
         
         #Initialize (or load) the weights for the network
         if(self.load_folder == None):
-            self.__init_weights()
+            try:
+                assert (self.num_layers != None) and (self.num_filters != None) and (self.filter_size != None)
+                self.__define_network()
+                self.__init_weights()
+            except:
+                print "ERROR: Insufficient parameters for generating new network"
+                sys.exit(0)
         else:
             self.__load_weights()
 
@@ -175,29 +183,44 @@ class CNN(object):
         #Create the cost funciton
         self.__set_cost()
         
-        try:
+        if(theano.config.device == 'cpu'):
+            #Create a predicter based on this network model
+            self.predictor = theano.function(inputs=[self.X], outputs=self.out, allow_input_downcast=True)
+            #Create a function to calculate the loss of this network
+            self.eval_cost = theano.function(inputs=[self.X, self.Y], outputs=self.cost, allow_input_downcast=True)
+        else:
             #Create a predicter based on this network model
             self.predictor = theano.function(inputs=[self.X], outputs=Out(gpu_from_host(self.out), borrow=True), allow_input_downcast=True)
             #self.predictor = theano.function(inputs=[self.X], outputs=self.out, allow_input_downcast=True)
             #Create a function to calculate the loss of this network
             self.eval_cost = theano.function(inputs=[self.X, self.Y], outputs=Out(gpu_from_host(self.cost), borrow=True), allow_input_downcast=True)
             #self.eval_cost = theano.function(inputs=[self.X, self.Y], outputs=self.cost, allow_input_downcast=True)
-        except:
-            #Create a predicter based on this network model
-            self.predictor = theano.function(inputs=[self.X], outputs=self.out, allow_input_downcast=True)
-            #Create a function to calculate the loss of this network
-            self.eval_cost = theano.function(inputs=[self.X, self.Y], outputs=self.cost, allow_input_downcast=True)
+
+            
            
        
     """
     Make a prediction on a set of inputs
-    Params: x must be a cubic 3D matrix
-    Returns: a 4D array where the first dimension is the affinity in each 
-           dimension and the last 3 dimensions correspond to the output image
+    TODO: Test this...
     """
-    def predict(self, x):
+    def predict(self, x, results_folder = '', name = 'prediction', chunk_size = 10):
+        
         out_size = x.shape[0] - self.sample_size + 1
-        return np.asarray(self.predictor(x[:,:,:].reshape((x.shape) + (1 ,)))).reshape((3, out_size, out_size, out_size))
+        f = h5py.File(results_folder + name + '.h5', 'w')
+        dset = f.create_dataset('main', (3, out_size, out_size, out_size), dtype='float32') 
+        
+        for i in range(0, out_size/chunk_size):
+            for j in range(0, out_size/chunk_size):
+                for k in range(0, out_size/chunk_size):
+                    dset[:, i*chunk_size:(i+1)*chunk_size, j*chunk_size:(j+1)*chunk_size, k*chunk_size:(k+1)*chunk_size] = np.asarray(self.predictor(x[i*chunk_size:(i+1)*chunk_size +self.sample_size -1,
+                                                                                                                                                       j*chunk_size:(j+1)*chunk_size +self.sample_size -1, 
+                                                                                                                                                       k*chunk_size:(k+1)*chunk_size +self.sample_size -1
+                                                                                                                                                       ].reshape((chunk_size +self.sample_size -1, 
+                                                                                                                                                                  chunk_size +self.sample_size -1, 
+                                                                                                                                                                  chunk_size +self.sample_size -1, 1))
+                                                                                                                                                     )).reshape((3, chunk_size, chunk_size, chunk_size))
+        f.close()
+        
         
         
     """
@@ -206,32 +229,22 @@ class CNN(object):
             y must be a cubic 3D matrix consisting of per-pixel affinity labels
     Returns: scalar loss value
     """
-    def loss(self, x, y, test_batch_size):
-        offset = (self.sample_size -1)/2
+    def loss(self, x, y):
+        out_size = x.shape[0] - self.sample_size + 1
+        offset = out_size/2
         
-        Ysub = np.zeros((3, test_batch_size))
-        Xsub = np.zeros((self.sample_size, self.sample_size, self.sample_size, test_batch_size))
-        for i in range(0, test_batch_size):
-            new_sample = self.rng.randint(0, x.shape[-1]-self.sample_size, 3)
-            xpos = new_sample[0]
-            ypos = new_sample[1]
-            zpos = new_sample[2]
-            Ysub[:, i] = y[:, xpos+offset, ypos+offset, zpos+offset]
-            Xsub[:,:,:, i] = x[xpos:xpos+self.sample_size, 
-                               ypos:ypos+self.sample_size,
-                               zpos:zpos+self.sample_size]
+        total_loss = 0
+        for i in range(0, out_size):
+            for j in range(0, out_size):
+                for k in range(0, out_size):
+                    total_loss += np.asarray(self.eval_cost(x[i:i+self.sample_size,
+                                                                j:j+self.sample_size, 
+                                                                k:k+self.sample_size].reshape((self.sample_size, self.sample_size, self.sample_size, 1)),
+                                                            y[:, i+offset, j+offset, k+offset].reshape((3, 1))))
         
-        return np.asarray(self.eval_cost(Xsub, Ysub))
-
-
-    """
-    Return the network for training
-    Returns a list containing the symbolic definition of the network as well
-     as the shared weights and the shared biases
-    """
-    def get_network(self):
-        return [self.X, self.Y, self.out, self.cost, self.w, self.b, self.net_shape]
         
+        return total_loss/((out_size+0.0)*3)
+ 
 
 
 

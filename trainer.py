@@ -15,7 +15,7 @@ import numpy as np
 theano.config.nvcc.flags='-use=fast=math'
 theano.config.allow_gc=False
 theano.config.floatX = 'float32'
-theano.sandbox.cuda.use('gpu1')
+theano.sandbox.cuda.use('gpu0')
 
 
 class Trainer(object):
