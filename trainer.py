@@ -12,6 +12,10 @@ import theano.sandbox.cuda
 from theano import tensor as T
 import numpy as np
 
+import os
+import time
+import logging
+
 theano.config.nvcc.flags='-use=fast=math'
 theano.config.allow_gc=False
 theano.config.floatX = 'float32'
@@ -30,29 +34,29 @@ class Trainer(object):
         if(self.learning_method == 'RMSprop'):
             
             #Initialize shared variable to store MS of gradient btw updates
-            self.rw = ()
-            self.rb = ()
+            self.vw = ()
+            self.vb = ()
             for layer in range(0, len(self.w)):
-                self.rw = self.rw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX), name='rw'+`layer`) ,)
-                self.rb = self.rb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX), name='rb'+`layer`) ,)      
+                self.vw = self.vw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX), name='vw'+`layer`) ,)
+                self.vb = self.vb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX), name='vb'+`layer`) ,)      
             
-            rw_updates = [
-                (r, (self.b1*r) + (1-self.b1)*grad**2)
-                for r, grad in zip(self.rw, w_grads)                   
+            vw_updates = [
+                (r, (self.b2*r) + (1-self.b2)*grad**2)
+                for r, grad in zip(self.vw, w_grads)                   
             ]
-            rb_updates = [
-                (r, (self.b1*r) + (1-self.b1)*grad**2)
-                for r, grad in zip(self.rb, b_grads)                   
+            vb_updates = [
+                (r, (self.b2*r) + (1-self.b2)*grad**2)
+                for r, grad in zip(self.vb, b_grads)                   
             ]
             w_updates = [
                 (param, param - self.lr*(grad/(T.sqrt(r) + self.damp)))
-                for param, r, grad in zip(self.w, self.rw, w_grads)                   
+                for param, r, grad in zip(self.w, self.vw, w_grads)                   
             ]
             b_updates = [
                 (param, param - self.lr*(grad/(T.sqrt(r) + self.damp)))
-                for param, r, grad in zip(self.b, self.rb, b_grads)                   
+                for param, r, grad in zip(self.b, self.vb, b_grads)                   
             ]    
-            self.updates = rw_updates + rb_updates + w_updates + b_updates
+            self.updates = vw_updates + vb_updates + w_updates + b_updates
             
         elif(self.learning_method == 'ADAM'):
             
@@ -129,8 +133,8 @@ class Trainer(object):
     Set the training examples for the current batch based on the sample values
     """
     def __load_batch(self): 
-        self.samples = theano.shared(np.zeros((3, self.batch_size*self.log_interval), 
-                                     dtype = 'int32'), name='samples')
+        self.batch = theano.shared(np.zeros((3, self.batch_size), 
+                                     dtype = 'int32'), name='batch')
         self.batch_counter = theano.shared(np.zeros(1, dtype='int32'), name='batch_counter') 
         self.index = theano.shared(np.zeros(1, dtype='int32'), name='index')                
         
@@ -141,12 +145,12 @@ class Trainer(object):
                 
         scan_vals = [
             (self.index, self.batch_counter - (self.update_counter*self.batch_size) ),
-            (self.Xsub, T.set_subtensor(self.Xsub[:,:,:,self.index[0]], self.training_data[self.samples[0, self.batch_counter[0]]:self.samples[0, self.batch_counter[0]] +self.seg, 
-                                                                                           self.samples[1, self.batch_counter[0]]:self.samples[1, self.batch_counter[0]] +self.seg, 
-                                                                                           self.samples[2, self.batch_counter[0]]:self.samples[2, self.batch_counter[0]] +self.seg]) ),
-            (self.Ysub, T.set_subtensor(self.Ysub[:,self.index[0]], self.training_labels[:, self.samples[0, self.batch_counter[0]]+self.offset, 
-                                                                                            self.samples[1, self.batch_counter[0]]+self.offset, 
-                                                                                            self.samples[2, self.batch_counter[0]]+self.offset]) ),
+            (self.Xsub, T.set_subtensor(self.Xsub[:,:,:,self.index[0]], self.training_data[self.batch[0, self.batch_counter[0]]:self.batch[0, self.batch_counter[0]] +self.seg, 
+                                                                                           self.batch[1, self.batch_counter[0]]:self.batch[1, self.batch_counter[0]] +self.seg, 
+                                                                                           self.batch[2, self.batch_counter[0]]:self.batch[2, self.batch_counter[0]] +self.seg]) ),
+            (self.Ysub, T.set_subtensor(self.Ysub[:,self.index[0]], self.training_labels[:, self.batch[0, self.batch_counter[0]]+self.offset, 
+                                                                                            self.batch[1, self.batch_counter[0]]+self.offset, 
+                                                                                            self.batch[2, self.batch_counter[0]]+self.offset]) ),
             (self.batch_counter, self.batch_counter+1)
         ]
         outputs, x_updates = theano.scan(lambda:scan_vals, n_steps=self.batch_size)
@@ -177,7 +181,6 @@ class Trainer(object):
 #        # which prevents extremely large networks from being trained.
 #        self.__update_loop()
         
-        
         self.train_model = theano.function(inputs=[], outputs=[],
                                            updates = self.updates,
                                            givens = [(self.X, self.Xsub),
@@ -204,30 +207,33 @@ class Trainer(object):
         self.net_shape = network.net_shape
         
         #Training parameters
-        trainer_status = "### Convolutional Network Trainer Log ###\n\n"
+        trainer_status = "\n### Convolutional Network Trainer Log ###\n\n"
         trainer_status += "Network Parameters\n"
         trainer_status += "num layers = "+ `network.num_layers` +"\n"
         trainer_status += "num filters = "+ `network.num_filters` +"\n"
         trainer_status += "filter size = "+ `network.filter_size` +"\n"        
-        trainer_status += "activation = "+ `network.activation` +"\n"
-        trainer_status += "cost function = "+ `network.cost_func` +"\n\n"
+        trainer_status += "activation = "+ `network.activation` +"\n\n"
                 
-        self.rng = kwargs.get('rng', np.random.RandomState(42))        
+        self.rng = kwargs.get('rng', np.random.RandomState(42))
         
         trainer_status += "Trainer Parameters\n"
+        trainer_status += "cost function = "+ `network.cost_func` +"\n"
         self.learning_method = kwargs.get('learning_method', 'standardSGD')
         trainer_status += "learning method = "+self.learning_method+"\n"
         self.batch_size = kwargs.get('batch_size', 100)
         trainer_status += "batch size = "+`self.batch_size`+"\n"
         self.lr = kwargs.get('learning_rate', 0.0001)
         trainer_status += "learning rate = "+`self.lr`+"\n"
-        self.b1 = kwargs.get('beta1', 0.9)
-        trainer_status += "beta 1 = "+`self.b1`+"\n"
-        self.b2 = kwargs.get('beta2', 0.999)
-        trainer_status += "beta 2 = "+`self.b2`+"\n"
-        self.damp = kwargs.get('damping', 1.0e-08)
-        trainer_status += "damping term = "+`self.damp`+"\n\n"
         
+        self.b1 = kwargs.get('beta1', 0.9)
+        if(self.learning_method=='ADAM'): trainer_status += "beta 1 = "+`self.b1`+"\n"
+        
+        self.b2 = kwargs.get('beta2', 0.999)
+        self.damp = kwargs.get('damping', 1.0e-08)
+        if(self.learning_method=='RMSprop') or (self.learning_method=='ADAM'): 
+            trainer_status += "beta 2 = "+`self.b2`+"\n"
+            trainer_status += "damping term = "+`self.damp`+"\n"
+            
         self.log_interval = kwargs.get('log_interval', 100)
         self.log_folder = kwargs.get('log_folder', '')
         
@@ -236,10 +242,12 @@ class Trainer(object):
         self.input_shape = (self.seg, self.seg, self.seg, self.batch_size)
         self.output_shape = (3, self.batch_size)
         
-        log_file = open(self.log_folder + 'trainer_log.txt', 'w')
-        log_file.write(trainer_status)
-        log_file.close()
-               
+        self.log_file = self.log_folder + 'trainer.log'
+        self.__clear_log()
+        logging.basicConfig(filename=self.log_file, level=logging.INFO)
+        self.logger = logging.getLogger(__name__)
+        self.logger.info(trainer_status+"\n")        
+        
         #Load the training set into memory
         self.__load_training_data(train_data, train_labels)
         
@@ -259,15 +267,15 @@ class Trainer(object):
         self.data_size = self.training_data.get_value(borrow=True).shape[-1]
         
         #List all the positions of negative labels
-        side_len = self.training_data.get_value(borrow=True).shape[0]
         negative_samples = []
-        for i in range(0, side_len-self.seg):
-            for j in range(0, side_len-self.seg):
-                for k in range(0, side_len-self.seg):
+        for i in range(0, self.data_size-self.seg):
+            for j in range(0, self.data_size-self.seg):
+                for k in range(0, self.data_size-self.seg):
                     if(self.training_labels.get_value(borrow=True)[:,i+self.offset, j+self.offset, k+self.offset].sum() == 0):
                         negative_samples += [[i, j, k]]
         
         self.negatives = np.asarray(negative_samples, dtype='int32')
+        self.epoch_length = ((self.data_size-self.seg)**3)/(self.log_interval*self.batch_size)
         
 
     """
@@ -286,17 +294,56 @@ class Trainer(object):
                 sample = self.negatives[sel]
             
             samples[:,i] = sample
-        self.samples.set_value(samples, borrow=True)
-    
+        self.batch.set_value(samples, borrow=True)
+
         
     """
-    Log the trainining and weight values at regular intervals
+    Store the trainining and weight values at regular intervals
     """
-    def __log_status(self, error):
+    def __store_status(self, error):
         error.tofile(self.log_folder + 'learning_curve.csv', sep=',')
+        
+        weights_folder = self.log_folder + 'weights/'
+        trainer_folder = self.log_folder + 'trainer/'
+        if not os.path.exists(weights_folder):
+            os.mkdir(weights_folder)
+        if not os.path.exists(trainer_folder):
+            os.mkdir(trainer_folder)
+        
         for i in range(0, self.net_shape.shape[0]):
-            self.w[i].get_value().tofile(self.log_folder + 'layer_'+`i`+'_weights.csv', sep=',')
-            self.b[i].get_value().tofile(self.log_folder + 'layer_'+`i`+'_bias.csv', sep=',')
+            self.w[i].get_value().tofile(weights_folder + 'layer_'+`i`+'_weights.csv', sep=',')
+            self.b[i].get_value().tofile(weights_folder + 'layer_'+`i`+'_bias.csv', sep=',')
+            if(self.learning_method == 'RMSprop'):
+                self.vw[i].get_value().tofile(trainer_folder + 'layer_'+`i`+'_weight_var.csv', sep=',')
+                self.vb[i].get_value().tofile(trainer_folder + 'layer_'+`i`+'_bias_var.csv', sep=',')
+            elif(self.learning_method == 'ADAM'):
+                self.vw[i].get_value().tofile(trainer_folder + 'layer_'+`i`+'_weight_var.csv', sep=',')
+                self.vb[i].get_value().tofile(trainer_folder + 'layer_'+`i`+'_bias_var.csv', sep=',')
+                self.mw[i].get_value().tofile(trainer_folder + 'layer_'+`i`+'_weight_mnt.csv', sep=',')
+                self.mb[i].get_value().tofile(trainer_folder + 'layer_'+`i`+'_bias_mnt.csv', sep=',')
+    
+
+    """Clear the logging file"""
+    def __clear_log(self):
+        with open(self.log_file, 'w'):
+            pass
+    
+    
+    """
+    Log the current status of the trainer and the network
+    """
+    def __log_trainer(self, epoch, error, train_time):
+        start_cost = error[epoch*self.epoch_length]
+        end_cost = error[(epoch+1)*self.epoch_length -1]
+        trainer_status  = "\n-- Status at epoch: "+`epoch`+" --\n"
+        trainer_status += "Change in average cost: "+`start_cost`+" -> "+`end_cost`+"\n"
+        diff = start_cost - end_cost
+        pcent = (diff/start_cost)*100
+        trainer_status += "     Improvement of "+`diff`+" or "+`pcent`+"%\n"
+        trainer_status += "Number of examples seen: "+`self.batch_size*self.log_interval*self.epoch_length`+"\n"
+        trainer_status += "Training time: "+`train_time/60`+" minutes\n\n"
+        
+        self.logger.info(trainer_status)
     
     
     """   
@@ -308,35 +355,36 @@ class Trainer(object):
     Returns: network cost at each update
     """
     def train(self, duration, early_stop = False, print_updates = True):
-
-        #Epochs to average over for early stopping
-        averaging_len = self.log_interval
-        if(early_stop):
-            early_stop = 0.0001
-        else:
-            early_stop = -1
         
-        train_error = np.zeros((duration/self.log_interval, self.log_interval))
+        train_error = np.zeros(duration * self.epoch_length)
+        
+        epoch_time = 0
+        total_time = 0        
         
         epoch = 0
-        while(epoch < duration/self.log_interval):
-                       
-            self.reset_counters()
-            self.__get_examples()
-
-            for i in range(0, self.log_interval):
-                self.train_model()      
+        while(epoch < duration):
             
-            train_error[epoch] = self.error.get_value(borrow=True)
-            
-            if(print_updates):
-                print 'Cost over updates '+`epoch*self.log_interval`+' - '+`(epoch+1)*self.log_interval`+' : '+`np.mean(train_error[epoch])`
-            
-            self.__log_status(train_error[train_error > 0])
+            starttime = time.clock()
+            for i in range(0, self.epoch_length):
                 
-            if early_stop:
-                error_diff = np.mean(train_error[epoch - averaging_len*2:epoch-averaging_len]) - np.mean(train_error[epoch - averaging_len:epoch])
-                if(np.abs(error_diff) < early_stop):
+                self.reset_counters()
+                self.__get_examples()
+    
+                for j in range(0, self.log_interval):
+                    self.train_model()      
+                
+                train_error[i] = np.mean(self.error.get_value(borrow=True))
+                
+                if(print_updates):
+                    print 'Average cost over updates '+`i*self.log_interval`+' - '+`(i+1)*self.log_interval`+' ('+`self.batch_size*self.log_interval`+' examples): '+`train_error[i]`
+            
+                self.__store_status(train_error[train_error > 0])
+            epoch_time = time.clock() - starttime
+            total_time += epoch_time            
+            
+            self.__log_trainer(epoch, train_error, epoch_time)
+            
+            if early_stop and (train_error[train_error > 0][-1] < 0.002):
                   epoch = duration
             
             epoch += 1

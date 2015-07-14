@@ -12,7 +12,7 @@ from cnn import CNN
 from load_data import LoadData
 
 
-results_folder = 'results/ADAM_2/'
+results_folder = 'results/ADAM/'
 prediction_file_name = 'test_prediction'
 
 train_data_folder = 'nobackup/turaga/data/fibsem_medulla_7col/trvol-250-1-h5/'

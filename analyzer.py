@@ -110,12 +110,12 @@ class Analyzer(object):
             self.learning_curve += (None ,)
             print 'Error: Unable to load learning curve.'
 
-        try:
-            self.pred_file += (h5py.File(results_folder + pred_name + '.h5', 'r') ,)
-            self.prediction += (self.pred_file[-1]['main'] ,)
-        except:
-            self.prediction += (None ,)
-            print 'Error: Unable to load test prediction.'
+        #try:
+        self.pred_file += (h5py.File(results_folder + pred_name + '.h5', 'r') ,)
+        self.prediction += (self.pred_file[-1]['main'] ,)
+#        except:
+#            self.prediction += (None ,)
+#            print 'Error: Unable to load test prediction.'
             
     
     def __init__(self, **kwargs):
@@ -166,8 +166,8 @@ class Analyzer(object):
         
         self.name += (kwargs.get('name', '') ,)
         
-        if (self.target != None) and (self.prediction[-1] != None):
-            self.__threshold_scan()
+#        if (self.target != None) and (self.prediction[-1] != None):
+#            self.__threshold_scan()
             
         
     """Store the results of an anlysis"""
@@ -354,7 +354,7 @@ class Analyzer(object):
         im2 = ax2.imshow(self.target[0,0,crop:-crop,crop:-crop])
         ax2.set_title('groundtruth')
         
-        im3 = ax3.imshow(self.prediction[res][0,0,0,:,:])
+        im3 = ax3.imshow(self.prediction[res][0,crop,:,:])
         ax3.set_title('prediction')     
         
         axcolor = 'lightgoldenrodyellow'
@@ -365,7 +365,7 @@ class Analyzer(object):
             zlayer = int(depth.val)
             im1.set_data(self.raw[crop+zlayer,crop:-crop,crop:-crop])
             im2.set_data(self.target[0,crop+zlayer,crop:-crop,crop:-crop])
-            im3.set_data(self.prediction[res][0, 0, zlayer,:,:])
+            im3.set_data(self.prediction[res][0, zlayer,:,:])
             fig.canvas.draw()
             
         depth.on_changed(update)        

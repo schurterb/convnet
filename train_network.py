@@ -28,15 +28,15 @@ activation = 'relu'
 #cost_func = 'MSE'
 
 #Learning Methods include standard SGD, RMSprop, and ADAM
-learning_method = 'ADAM'
+learning_method = 'RMSprop'
 batch_size = 10
 num_updates = 100
 log_interval = 100
 
 #Hyper-parameters for the chosen learning method
-learning_rate = 0.001
+learning_rate = 0.00001
 beta1 = 0.9
-beta2 = 0.99
+beta2 = 0.9
 damping = 1.0e-8
 early_stop = False
 
