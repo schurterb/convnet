@@ -9,4 +9,44 @@ no pooling, dropout, or regression. It can be of any depth or width with any
 size of convolutional filters, provided the user's machine has the memory for 
 exceptionally large networks.
 
-   
+-------------------------------------------------------------------------------
+## Defining Networks
+All user-definable parameters for building, training, and testing a network are
+defined in network.ini. Parameters defining the structure of the network are
+listed under the [Network] section.
+
+"""
+[Network]
+activation = relu
+cost_func = MSE
+load_weights = True
+weights_folder = test/weights/
+
+num_layers = 5
+num_filters = 6
+filter_size = 5
+"""
+
+Current options for activation functions include
+    relu for Rectified Linear Units
+    tanh for Hyperbolic Tangent
+    sig for Sigmoid
+
+The output layer is always run through a sigmoid, since the network is acting 
+as a classifier for the weights of an affinity graph.
+
+-------------------------------------------------------------------------------
+## Training and Testing Networks
+Once the network is defined in network.ini, it can be trained by calling
+
+"""
+python train_network.py --config path/to/network.ini
+"""
+
+Similarly, predictions can be made on the test set by calling
+
+"""
+python test_network.py --config path/to/network.ini
+"""
+
+-------------------------------------------------------------------------------

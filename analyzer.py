@@ -328,46 +328,99 @@ class Analyzer(object):
     
     
     """Displays three images: the raw data, the corresponding labels, and the predictions"""
-    def display(self, result_name):
+    def display(self, result_name, equal_indexing=False):
         
-        if (type(result_name) == str):
-            res = self.name.index(result_name)
-        elif (type(result_name) == int) and (result_name < len(self.prediction)):
-            res = result_name
+        max_crop = 0
+        if equal_indexing:
+            for res in range(len(self.name)):
+                crop = (self.target.shape[-1] - self.prediction[res].shape[-1])/2
+                if(crop > max_crop):
+                    max_crop = crop        
+
+            if (type(result_name) == str):
+                res = self.name.index(result_name)
+            elif (type(result_name) == int) and (result_name < len(self.prediction)):
+                res = result_name
+            else:
+                print 'Invalid Entry'
+                return;
+                
+            fig = plt.figure()
+            ax1 = fig.add_subplot(1,3,1)
+            ax2 = fig.add_subplot(1,3,2)
+            ax3 = fig.add_subplot(1,3,3)
+            fig.subplots_adjust(left=0.25, bottom=0.25)
+            depth0 = 0
+            
+            crop = (self.target.shape[-1] - self.prediction[res].shape[-1])/2            
+            
+            #All these images are in gray-scale
+            plt.gray()
+            im1 = ax1.imshow(self.raw[0,max_crop:-max_crop,max_crop:-max_crop])
+            ax1.set_title('raw image', fontsize = 20)
+            
+            im2 = ax2.imshow(self.target[0,0,max_crop:-max_crop,max_crop:-max_crop])
+            ax2.set_title('groundtruth', fontsize = 20)
+            
+            im3 = ax3.imshow(self.prediction[res][0,max_crop-crop,:,:])
+            ax3.set_title('prediction', fontsize = 20)     
+            
+            axcolor = 'lightgoldenrodyellow'
+            axdepth = fig.add_axes([0.25, 0.3, 0.65, 0.03], axisbg=axcolor)
+            depth = Slider(axdepth, 'Min', 0, self.prediction[res].shape[-1]-max_crop, valinit=depth0)
+            
+            def update(val):
+                zlayer = int(depth.val)
+                im1.set_data(self.raw[max_crop+zlayer,max_crop:-max_crop,max_crop:-max_crop])
+                im2.set_data(self.target[0,max_crop+zlayer,max_crop:-max_crop,max_crop:-max_crop])
+                im3.set_data(self.prediction[res][0, max_crop-crop+zlayer,:,:])
+                fig.canvas.draw()
+                
+            fig.suptitle(self.name[res], fontsize = 20)
+            depth.on_changed(update)        
+            plt.show()
         else:
-            print 'Invalid Entry'
-            return;
+            if (type(result_name) == str):
+                res = self.name.index(result_name)
+            elif (type(result_name) == int) and (result_name < len(self.prediction)):
+                res = result_name
+            else:
+                print 'Invalid Entry'
+                return;
+                
+            fig = plt.figure()
+            ax1 = fig.add_subplot(1,3,1)
+            ax2 = fig.add_subplot(1,3,2)
+            ax3 = fig.add_subplot(1,3,3)
+            fig.subplots_adjust(left=0.25, bottom=0.25)
+            depth0 = 0
             
-        fig = plt.figure()
-        ax1 = fig.add_subplot(1,3,1)
-        ax2 = fig.add_subplot(1,3,2)
-        ax3 = fig.add_subplot(1,3,3)
-        fig.subplots_adjust(left=0.25, bottom=0.25)
-        depth0 = 0
-        
-        crop = (self.target.shape[-1] - self.prediction[res].shape[-1])/2        
-        
-        #All these images are in gray-scale
-        plt.gray()
-        im1 = ax1.imshow(self.raw[0,crop:-crop,crop:-crop])
-        ax1.set_title('raw image')
-        
-        im2 = ax2.imshow(self.target[0,0,crop:-crop,crop:-crop])
-        ax2.set_title('groundtruth')
-        
-        im3 = ax3.imshow(self.prediction[res][0,crop,:,:])
-        ax3.set_title('prediction')     
-        
-        axcolor = 'lightgoldenrodyellow'
-        axdepth = fig.add_axes([0.25, 0.3, 0.65, 0.03], axisbg=axcolor)
-        depth = Slider(axdepth, 'Min', 0, self.prediction[res].shape[-1]-crop, valinit=depth0)
-        
-        def update(val):
-            zlayer = int(depth.val)
-            im1.set_data(self.raw[crop+zlayer,crop:-crop,crop:-crop])
-            im2.set_data(self.target[0,crop+zlayer,crop:-crop,crop:-crop])
-            im3.set_data(self.prediction[res][0, zlayer,:,:])
-            fig.canvas.draw()
+            crop = (self.target.shape[-1] - self.prediction[res].shape[-1])/2        
             
-        depth.on_changed(update)        
-        plt.show()
+            #All these images are in gray-scale
+            plt.gray()
+            im1 = ax1.imshow(self.raw[0,crop:-crop,crop:-crop])
+            ax1.set_title('raw image', fontsize = 20)
+            
+            im2 = ax2.imshow(self.target[0,0,crop:-crop,crop:-crop])
+            ax2.set_title('groundtruth', fontsize = 20)
+            
+            im3 = ax3.imshow(self.prediction[res][0,crop,:,:])
+            ax3.set_title('prediction', fontsize = 20)     
+            
+            axcolor = 'lightgoldenrodyellow'
+            axdepth = fig.add_axes([0.25, 0.3, 0.65, 0.03], axisbg=axcolor)
+            depth = Slider(axdepth, 'Min', 0, self.prediction[res].shape[-1]-crop, valinit=depth0)
+            
+            def update(val):
+                zlayer = int(depth.val)
+                im1.set_data(self.raw[crop+zlayer,crop:-crop,crop:-crop])
+                im2.set_data(self.target[0,crop+zlayer,crop:-crop,crop:-crop])
+                im3.set_data(self.prediction[res][0, zlayer,:,:])
+                fig.canvas.draw()
+                
+            fig.suptitle(self.name[res], fontsize = 20)
+            depth.on_changed(update)        
+            plt.show()
+
+            
