@@ -18,10 +18,7 @@ from theano.tensor.nnet.conv3d2d import conv3d
 import h5py
 
 
-theano.config.nvcc.flags='-use=fast=math'
-theano.config.allow_gc=False
 theano.config.floatX = 'float32'
-theano.sandbox.cuda.use('gpu0')
 
 
 class CNN(object): 

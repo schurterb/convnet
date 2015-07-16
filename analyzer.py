@@ -110,12 +110,12 @@ class Analyzer(object):
             self.learning_curve += (None ,)
             print 'Error: Unable to load learning curve.'
 
-        #try:
-        self.pred_file += (h5py.File(results_folder + pred_name + '.h5', 'r') ,)
-        self.prediction += (self.pred_file[-1]['main'] ,)
-#        except:
-#            self.prediction += (None ,)
-#            print 'Error: Unable to load test prediction.'
+        try:
+            self.pred_file += (h5py.File(results_folder + pred_name + '.h5', 'r') ,)
+            self.prediction += (self.pred_file[-1]['main'] ,)
+        except:
+            self.prediction += (None ,)
+            print 'Error: Unable to load test prediction.'
             
     
     def __init__(self, **kwargs):
@@ -139,7 +139,7 @@ class Analyzer(object):
         self.target = kwargs.get('target', None)
         self.raw = kwargs.get('raw', None)
         
-        if (results_folder != None):
+        if (results_folder != None) and (self.target != None):
             self.name = (kwargs.get('name', '') ,)
             self.__load_results(results_folder)
             self.__threshold_scan()
@@ -166,8 +166,9 @@ class Analyzer(object):
         
         self.name += (kwargs.get('name', '') ,)
         
-#        if (self.target != None) and (self.prediction[-1] != None):
-#            self.__threshold_scan()
+        analyze_prediction = kwargs.get('analyze', True)
+        if analyze_prediction and (self.target != None) and (self.prediction[-1] != None):
+            self.__threshold_scan()
             
         
     """Store the results of an anlysis"""

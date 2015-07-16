@@ -15,11 +15,10 @@ import numpy as np
 import os
 import time
 import logging
+import csv
 
-theano.config.nvcc.flags='-use=fast=math'
-theano.config.allow_gc=False
+
 theano.config.floatX = 'float32'
-theano.sandbox.cuda.use('gpu0')
 
 
 class Trainer(object):
@@ -38,7 +37,8 @@ class Trainer(object):
             self.vb = ()
             for layer in range(0, len(self.w)):
                 self.vw = self.vw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX), name='vw'+`layer`) ,)
-                self.vb = self.vb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX), name='vb'+`layer`) ,)      
+                self.vb = self.vb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX), name='vb'+`layer`) ,)  
+
             
             vw_updates = [
                 (r, (self.b2*r) + (1-self.b2)*grad**2)
@@ -145,12 +145,12 @@ class Trainer(object):
                 
         scan_vals = [
             (self.index, self.batch_counter - (self.update_counter*self.batch_size) ),
-            (self.Xsub, T.set_subtensor(self.Xsub[:,:,:,self.index[0]], self.training_data[self.batch[0, self.batch_counter[0]]:self.batch[0, self.batch_counter[0]] +self.seg, 
-                                                                                           self.batch[1, self.batch_counter[0]]:self.batch[1, self.batch_counter[0]] +self.seg, 
-                                                                                           self.batch[2, self.batch_counter[0]]:self.batch[2, self.batch_counter[0]] +self.seg]) ),
-            (self.Ysub, T.set_subtensor(self.Ysub[:,self.index[0]], self.training_labels[:, self.batch[0, self.batch_counter[0]]+self.offset, 
-                                                                                            self.batch[1, self.batch_counter[0]]+self.offset, 
-                                                                                            self.batch[2, self.batch_counter[0]]+self.offset]) ),
+            (self.Xsub, T.set_subtensor(self.Xsub[:,:,:,self.index[0]], self.training_data[0][self.batch[0, self.batch_counter[0]]:self.batch[0, self.batch_counter[0]] +self.seg, 
+                                                                                              self.batch[1, self.batch_counter[0]]:self.batch[1, self.batch_counter[0]] +self.seg, 
+                                                                                              self.batch[2, self.batch_counter[0]]:self.batch[2, self.batch_counter[0]] +self.seg]) ),
+            (self.Ysub, T.set_subtensor(self.Ysub[:,self.index[0]], self.training_labels[0][:, self.batch[0, self.batch_counter[0]]+self.offset, 
+                                                                                               self.batch[1, self.batch_counter[0]]+self.offset, 
+                                                                                               self.batch[2, self.batch_counter[0]]+self.offset]) ),
             (self.batch_counter, self.batch_counter+1)
         ]
         outputs, x_updates = theano.scan(lambda:scan_vals, n_steps=self.batch_size)
@@ -215,6 +215,7 @@ class Trainer(object):
         trainer_status += "activation = "+ `network.activation` +"\n\n"
                 
         self.rng = kwargs.get('rng', np.random.RandomState(42))
+        self.trainer_folder = kwargs.get('trainer_folder', None)
         
         trainer_status += "Trainer Parameters\n"
         trainer_status += "cost function = "+ `network.cost_func` +"\n"
@@ -244,6 +245,7 @@ class Trainer(object):
         
         self.log_file = self.log_folder + 'trainer.log'
         self.__clear_log()
+        self.__init_lc()
         logging.basicConfig(filename=self.log_file, level=logging.INFO)
         self.logger = logging.getLogger(__name__)
         self.logger.info(trainer_status+"\n")        
@@ -262,20 +264,29 @@ class Trainer(object):
     def __load_training_data(self, train_set, train_labels):
           
         #Load all the training data into the GPUs memore
-        self.training_data = theano.shared(train_set[:,:,:], borrow=True)
-        self.training_labels = theano.shared(train_labels[:,:,:,:], borrow=True)
-        self.data_size = self.training_data.get_value(borrow=True).shape[-1]
+        if(type(train_set) == tuple):
+            self.training_data = ()
+            self.traingin_labels = ()
+            self.data_size = ()
+            for data, labels in zip(train_set, train_labels):
+                self.training_data += (theano.shared(data[:,:,:], borrow=True) ,)
+                self.training_labels += (theano.shared(labels[:,:,:,:], borrow=True) ,)
+                self.data_size += self.training_data[-1].get_value(borrow=True).shape[-1]
+        else:
+            self.training_data = (theano.shared(train_set[:,:,:], borrow=True) ,)
+            self.training_labels = (theano.shared(train_labels[:,:,:,:], borrow=True) ,)
+            self.data_size = (self.training_data[-1].get_value(borrow=True).shape[-1] ,)
         
         #List all the positions of negative labels
         negative_samples = []
-        for i in range(0, self.data_size-self.seg):
-            for j in range(0, self.data_size-self.seg):
-                for k in range(0, self.data_size-self.seg):
-                    if(self.training_labels.get_value(borrow=True)[:,i+self.offset, j+self.offset, k+self.offset].sum() == 0):
+        for i in range(0, self.data_size[-1]-self.seg):
+            for j in range(0, self.data_size[-1]-self.seg):
+                for k in range(0, self.data_size[-1]-self.seg):
+                    if(self.training_labels[-1].get_value(borrow=True)[:,i+self.offset, j+self.offset, k+self.offset].sum() == 0):
                         negative_samples += [[i, j, k]]
         
         self.negatives = np.asarray(negative_samples, dtype='int32')
-        self.epoch_length = ((self.data_size-self.seg)**3)/(self.log_interval*self.batch_size)
+        self.epoch_length = ((self.data_size[-1]-self.seg)**3)/(self.log_interval*self.batch_size)
         
 
     """
@@ -286,9 +297,9 @@ class Trainer(object):
         for i in range(0, self.batch_size*self.log_interval):
             sel = self.rng.randn(1)
             if (sel > 0):   #Search for a positive example. They are common.
-                sample = self.rng.randint(0, self.data_size - self.seg, 3)
+                sample = self.rng.randint(0, self.data_size[-1] - self.seg, 3)
                 while np.sum(np.sum(self.negatives == sample, 1) == 3):
-                    sample = self.rng.randint(0, self.data_size - self.seg, 3)
+                    sample = self.rng.randint(0, self.data_size[-1] - self.seg, 3)
             else:           #Select a negative example from the known negatives, rather than searching for them.
                 sel = self.rng.randint(0, self.negatives.shape[0], 1)[0]
                 sample = self.negatives[sel]
@@ -301,7 +312,10 @@ class Trainer(object):
     Store the trainining and weight values at regular intervals
     """
     def __store_status(self, error):
-        error.tofile(self.log_folder + 'learning_curve.csv', sep=',')
+        
+        with open(self.log_folder + '/learning_curve.csv', 'ab') as lcf:
+            fw = csv.writer(lcf, delimiter=',')
+            fw.writerow([error])
         
         weights_folder = self.log_folder + 'weights/'
         trainer_folder = self.log_folder + 'trainer/'
@@ -327,6 +341,12 @@ class Trainer(object):
     def __clear_log(self):
         with open(self.log_file, 'w'):
             pass
+    
+    
+    """Make sure there is a file for the learning curve"""
+    def __init_lc(self):
+        if not os.path.isfile(self.log_folder + 'learning_curve.csv'):
+            open(self.log_folder + 'learning_curve.csv', 'w').close()
     
     
     """
@@ -361,6 +381,7 @@ class Trainer(object):
         epoch_time = 0
         total_time = 0        
         
+        
         epoch = 0
         while(epoch < duration):
             
@@ -373,12 +394,12 @@ class Trainer(object):
                 for j in range(0, self.log_interval):
                     self.train_model()      
                 
-                train_error[i] = np.mean(self.error.get_value(borrow=True))
+                train_error[epoch*self.epoch_length + i] = np.mean(self.error.get_value(borrow=True))
                 
                 if(print_updates):
                     print 'Average cost over updates '+`i*self.log_interval`+' - '+`(i+1)*self.log_interval`+' ('+`self.batch_size*self.log_interval`+' examples): '+`train_error[i]`
             
-                self.__store_status(train_error[train_error > 0])
+                self.__store_status(train_error[i])
             epoch_time = time.clock() - starttime
             total_time += epoch_time            
             

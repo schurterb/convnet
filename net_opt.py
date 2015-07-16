@@ -24,9 +24,9 @@ def objective(x):
 
 
 #Search space
-space = [hp.choice('nlayers', range(8, 15)),
-         hp.choice('nfilters', range(10, 50, 2)),
-         hp.choice('fsizes', range(5, 11, 2))]
+space = [hp.choice('nlayers', range(6, 14, 2)),
+         hp.choice('nfilters', range(10, 40, 2)),
+         hp.choice('fsizes', range(3, 9, 2))]
          
         
 #Set the optimizer to use a mongo database
@@ -38,7 +38,7 @@ print 'Begin optimization'
 #Run the hyper optimization
 best_params = fmin(objective, space,
                    algo=tpe.suggest,
-                   max_evals=150,
+                   max_evals=50,
                    trials=trials)
                    
 print 'Optimization complete'
