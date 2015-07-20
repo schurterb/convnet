@@ -40,7 +40,7 @@ as a classifier for the weights of an affinity graph.
 Once the network is defined in network.ini, it can be trained by calling
 
 ```
-python train_network.py --config path/to/network.ini
+python train_network.py -c path/to/network.ini
 ```
 
 Similarly, predictions can be made on the test set by calling
