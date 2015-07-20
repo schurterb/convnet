@@ -7,6 +7,10 @@ Created on Thu Jun 25 10:39:19 2015
 Analyzer class to perform a basic analysis of the results from training and 
  testing a convolutional network
 """
+import sys
+sys.path.append('randIndex')
+import evaluateFiles
+from evaluateFiles import evaluateFiles as randEval
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -97,6 +101,21 @@ class Analyzer(object):
             self.fscore[-1][i] = results[3]
             self.tpr[-1][i] = results[4]
             self.fpr[-1][i] = results[5]
+            
+    
+    """randIndex analysis"""
+    def __performance_analysis(self, results_folder):
+        crop = (self.target.shape[-1] - self.prediction[-1].shape[-1])/2
+
+#        self.presults, self.rresults = randEval(np.asarray(self.target[:, crop:-crop, crop:-crop, crop:-crop], dtype=np.float),
+#                                                np.asarray(self.prediction[-1][...], dtype=np.float), results_folder)
+        
+        self.presults, self.rresults = randEval(np.transpose(np.asarray(self.target[:, crop:crop+10, crop:crop+10, crop:crop+10], dtype=np.float), (1, 2, 3, 0)),
+                                                np.transpose(np.asarray(self.prediction[-1][:, 0:10, 0:10, 0:10], dtype=np.float), (1, 2, 3, 0)), results_folder)
+        #Variables to store results of analysis:
+        
+        
+        
                 
             
     
@@ -142,11 +161,10 @@ class Analyzer(object):
         if (results_folder != None) and (self.target != None):
             self.name = (kwargs.get('name', '') ,)
             self.__load_results(results_folder)
-            self.__threshold_scan()
+            #self.__threshold_scan()
+            self.__performance_analysis(results_folder)
         else:
-            self.name = ()
-
-            
+            self.name = ()            
             
         
     """Add more than one set of results to analyze at a time""" 
@@ -168,7 +186,8 @@ class Analyzer(object):
         
         analyze_prediction = kwargs.get('analyze', True)
         if analyze_prediction and (self.target != None) and (self.prediction[-1] != None):
-            self.__threshold_scan()
+            #self.__threshold_scan()
+            self.__performance_analysis(results_folder)
             
         
     """Store the results of an anlysis"""
@@ -178,13 +197,16 @@ class Analyzer(object):
             index = -1
         else:
             index = np.where(self.name == res_name)[0]
-            
-        self.accuracy[index].tofile(results_folder + 'accuracy.csv', sep=',')
-        self.precision[index].tofile(results_folder + 'precision.csv', sep=',')
-        self.recall[index].tofile(results_folder + 'recall.csv', sep=',')
-        self.fscore[index].tofile(results_folder + 'fscore.csv', sep=',')
-        self.tpr[index].tofile(results_folder + 'true_pos_rate.csv', sep=',')
-        self.fpr[index].tofile(results_folder + 'false_pos_rate.csv', sep=',')
+        
+        if(len(self.accuracy) > 0):
+            self.accuracy[index].tofile(results_folder + 'accuracy.csv', sep=',')
+            self.precision[index].tofile(results_folder + 'precision.csv', sep=',')
+            self.recall[index].tofile(results_folder + 'recall.csv', sep=',')
+            self.fscore[index].tofile(results_folder + 'fscore.csv', sep=',')
+            self.tpr[index].tofile(results_folder + 'true_pos_rate.csv', sep=',')
+            self.fpr[index].tofile(results_folder + 'false_pos_rate.csv', sep=',')
+        else:
+            print 'No results available.'
         
         
     """Load the results of a previous analysis"""

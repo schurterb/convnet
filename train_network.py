@@ -48,17 +48,12 @@ def train_network(config_file):
                   
     print 'Opening Data Files'
     #Load the data for training
-    training_data = LoadData(directory = config.get('Training Data', 'folders'), 
+    training_data = LoadData(directory = config.get('Training Data', 'folders').split(','), 
                              data_file_name = config.get('Training Data', 'data_file'),
                              label_file_name = config.get('Training Data', 'label_file'))
     #------------------------------------------------------------------------------
                              
     print 'Initializing Trainer'
-    #Create a trainer for the network
-#    if config.getboolean('Network', 'load_weights'):
-#        trainer_folder = config.get('Training', 'trainer_folder')
-#    else:
-#        trainer_folder = None
     network_trainer = Trainer(network, training_data.get_data(), training_data.get_labels(), 
                               batch_size = config.getint('Training', 'batch_size'),
                               learning_method = config.get('Training', 'learning_method'),
@@ -85,14 +80,16 @@ def train_network(config_file):
     print "Initialization = " + `init_time` + " seconds"
     print "Total Time     = " + `total_time` + " seconds"
     
+    return train_error
+    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", help="path to .ini file for network. default is network.ini")
+    parser.add_argument("-c", help="path to .ini file for network. default is network.ini")
     
     args = parser.parse_args()
-    if args.config:
-        config_file = args.config
+    if args.c:
+        config_file = args.c
     else:
         config_file = "network.ini"
         

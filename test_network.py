@@ -14,6 +14,7 @@ import argparse
 import theano
 from cnn import CNN
 from load_data import LoadData
+from analyzer import Analyzer
 
 
 def test_network(config_file):
@@ -42,29 +43,45 @@ def test_network(config_file):
                          data_file_name = config.get('Testing Data', 'data_file'),
                          label_file_name = config.get('Testing Data', 'label_file'))
     #------------------------------------------------------------------------------
-    init_time = time.clock() - starttime                        
+    init_time = time.clock() - starttime
+    print "Initialization = " + `init_time` + " seconds"       
                            
-                             
+            
+    starttime = time.clock()                 
     print 'Making Predictions'
-    starttime = time.clock()
     network.predict(test_data.get_data(),
                     results_folder = config.get('Testing', 'prediction_folder'), 
                     name = config.get('Testing', 'prediction_file'))
     testing_time = time.clock() - starttime
     #------------------------------------------------------------------------------
-    
-    print "Initialization = " + `init_time` + " seconds"
     print "Testing Time   = " + `testing_time` + " seconds"
+        
+    
+    starttime = time.clock()
+    print 'Analyzing Predictions'
+    results = Analyzer(threshold_steps = config.getint('Testing', 'num_thresholds'), 
+                       results_folder = config.get('Testing', 'prediction_folder'),
+                       target = test_data.get_labels(), raw = test_data.get_data(),
+                       name = config.get('Testing', 'prediction_folder'),
+                       prediction_file = config.get('Testing', 'prediction_file'),
+                       analyze = config.getboolean('Testing', 'analyze_results'))
+    if config.getboolean('Testing', 'analyze_results'):
+        results.store_results(results_folder = config.get('Testing', 'prediction_folder'))
+    analyze_time = time.clock() - starttime
     #------------------------------------------------------------------------------
+    print "Analysis Time  = " + `analyze_time` + " seconds"
+    
+    return results
+    
     
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", help="path to .ini file for network. default is network.ini")
+    parser.add_argument("-c", help="path to .ini file for network. default is network.ini")
     
     args = parser.parse_args()
-    if args.config:
-        config_file = args.config
+    if args.c:
+        config_file = args.c
     else:
         config_file = "network.ini"
         

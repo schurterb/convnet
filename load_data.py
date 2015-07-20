@@ -17,11 +17,23 @@ class LoadData(object):
     def __read_files(self):
         
         if(self.file_type == 'hdf5'):
-            self.data_file = h5py.File(self.folder + self.data_file_name, 'r')
-            self.x = self.data_file['main']
-            
-            self.label_file = h5py.File(self.folder + self.label_file_name, 'r')
-            self.y = self.label_file['main']
+            if (type(self.folder) == tuple) or (type(self.folder) == list):
+                self.data_file = ()
+                self.label_file = ()
+                self.x = ()
+                self.y = ()
+                for folder in self.folder:
+                    self.data_file += (h5py.File(folder + self.data_file_name, 'r') ,)
+                    self.x += (self.data_file[-1]['main'] ,)
+                    
+                    self.label_file += (h5py.File(folder + self.label_file_name, 'r') ,)
+                    self.y += (self.label_file[-1]['main'] ,)
+            else:
+                self.data_file = (h5py.File(self.folder + self.data_file_name, 'r') ,)
+                self.x = (self.data_file[-1]['main'] ,)
+                
+                self.label_file = (h5py.File(self.folder + self.label_file_name, 'r') ,)
+                self.y = (self.label_file[-1]['main'] ,)
             
         else:   
             raise TypeError("Unsupported file type")
@@ -37,7 +49,7 @@ class LoadData(object):
          self.data_file_name = kwargs.get('data_file_name', None)
          self.label_file_name = kwargs.get('label_file_name', None)
          self.file_type = kwargs.get('file_type', 'hdf5')
-         
+
          self.home_folder = os.getcwd() + '/'
          os.chdir('/.')
          
@@ -58,7 +70,8 @@ class LoadData(object):
     In the case of hdf5 files, the data will no longer be accessible after this.
     """
     def close(self):
-        self.data_file.close()
-        self.label_file.close()
+        for dfile, lfile in zip(self.data_file, self.label_file):
+            dfile.close()
+            lfile.close()
         
     
