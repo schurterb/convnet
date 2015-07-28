@@ -49,29 +49,29 @@ def test_network(config_file):
             
     starttime = time.clock()                 
     print 'Making Predictions'
-    network.predict(test_data.get_data(),
+    network.predict(test_data.get_data()[0],
                     results_folder = config.get('Testing', 'prediction_folder'), 
                     name = config.get('Testing', 'prediction_file'))
     testing_time = time.clock() - starttime
     #------------------------------------------------------------------------------
     print "Testing Time   = " + `testing_time` + " seconds"
         
-    
-    starttime = time.clock()
-    print 'Analyzing Predictions'
-    results = Analyzer(threshold_steps = config.getint('Testing', 'num_thresholds'), 
-                       results_folder = config.get('Testing', 'prediction_folder'),
-                       target = test_data.get_labels(), raw = test_data.get_data(),
-                       name = config.get('Testing', 'prediction_folder'),
-                       prediction_file = config.get('Testing', 'prediction_file'),
-                       analyze = config.getboolean('Testing', 'analyze_results'))
-    if config.getboolean('Testing', 'analyze_results'):
-        results.store_results(results_folder = config.get('Testing', 'prediction_folder'))
-    analyze_time = time.clock() - starttime
-    #------------------------------------------------------------------------------
-    print "Analysis Time  = " + `analyze_time` + " seconds"
-    
-    return results
+    test_data.close()
+#    starttime = time.clock()
+#    print 'Analyzing Predictions'
+#    results = Analyzer(threshold_steps = config.getint('Testing', 'num_thresholds'), 
+#                       results_folder = config.get('Testing', 'prediction_folder'),
+#                       target = test_data.get_labels(), raw = test_data.get_data(),
+#                       name = config.get('Testing', 'prediction_folder'),
+#                       prediction_file = config.get('Testing', 'prediction_file'),
+#                       analyze = config.getboolean('Testing', 'analyze_results'))
+#    if config.getboolean('Testing', 'analyze_results'):
+#        results.store_results(results_folder = config.get('Testing', 'prediction_folder'))
+#    analyze_time = time.clock() - starttime
+#    #------------------------------------------------------------------------------
+#    print "Analysis Time  = " + `analyze_time` + " seconds"
+#    
+#    return results
     
     
 

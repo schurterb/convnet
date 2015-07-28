@@ -173,7 +173,7 @@ class CNN(object):
         #Input and Target variables for symbolic representation of network
         self.X = T.tensor4('X')
         self.Y = T.matrix('Y')            
-            
+        
         #Create the network model
         self.__model()
         
@@ -202,21 +202,23 @@ class CNN(object):
     """
     def predict(self, x, results_folder = '', name = 'prediction', chunk_size = 10):
         
-        out_size = x.shape[0] - self.sample_size + 1
-        f = h5py.File(results_folder + name + '.h5', 'w')
-        dset = f.create_dataset('main', (3, out_size, out_size, out_size), dtype='float32') 
-        
-        for i in range(0, out_size/chunk_size):
-            for j in range(0, out_size/chunk_size):
-                for k in range(0, out_size/chunk_size):
-                    dset[:, i*chunk_size:(i+1)*chunk_size, j*chunk_size:(j+1)*chunk_size, k*chunk_size:(k+1)*chunk_size] = np.asarray(self.predictor(x[i*chunk_size:(i+1)*chunk_size +self.sample_size -1,
-                                                                                                                                                       j*chunk_size:(j+1)*chunk_size +self.sample_size -1, 
-                                                                                                                                                       k*chunk_size:(k+1)*chunk_size +self.sample_size -1
-                                                                                                                                                       ].reshape((chunk_size +self.sample_size -1, 
-                                                                                                                                                                  chunk_size +self.sample_size -1, 
-                                                                                                                                                                  chunk_size +self.sample_size -1, 1))
-                                                                                                                                                     )).reshape((3, chunk_size, chunk_size, chunk_size))
-        f.close()
+        for i in range(len(x)):
+            xsub = x[i]
+            out_size = xsub.shape[0] - self.sample_size + 1
+            f = h5py.File(results_folder + name + '_'+`i`+'.h5', 'w')
+            dset = f.create_dataset('main', (3, out_size, out_size, out_size), dtype='float32') 
+            
+            for i in range(0, out_size/chunk_size):
+                for j in range(0, out_size/chunk_size):
+                    for k in range(0, out_size/chunk_size):
+                        dset[:, i*chunk_size:(i+1)*chunk_size, j*chunk_size:(j+1)*chunk_size, k*chunk_size:(k+1)*chunk_size] = np.asarray(self.predictor(xsub[i*chunk_size:(i+1)*chunk_size +self.sample_size -1,
+                                                                                                                                                              j*chunk_size:(j+1)*chunk_size +self.sample_size -1, 
+                                                                                                                                                              k*chunk_size:(k+1)*chunk_size +self.sample_size -1
+                                                                                                                                                              ].reshape((chunk_size +self.sample_size -1, 
+                                                                                                                                                                         chunk_size +self.sample_size -1, 
+                                                                                                                                                                         chunk_size +self.sample_size -1, 1))
+                                                                                                                                                         )).reshape((3, chunk_size, chunk_size, chunk_size))
+            f.close()
         
         
         

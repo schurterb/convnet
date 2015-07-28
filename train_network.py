@@ -54,6 +54,11 @@ def train_network(config_file):
     #------------------------------------------------------------------------------
                              
     print 'Initializing Trainer'
+    try:
+        trainer_folder = config.getboolean('Training', 'trainer_folder')
+    except:
+        trainer_folder = None
+        
     network_trainer = Trainer(network, training_data.get_data(), training_data.get_labels(), 
                               batch_size = config.getint('Training', 'batch_size'),
                               learning_method = config.get('Training', 'learning_method'),
@@ -61,6 +66,7 @@ def train_network(config_file):
                               beta1 = config.getfloat('Training', 'beta1'),
                               beta2 = config.getfloat('Training', 'beta2'), 
                               damping = config.getfloat('Training', 'damping'), 
+                              trainer_folder = trainer_folder,
                               log_interval = config.getint('Logging', 'log_interval'),
                               log_folder = config.get('Logging', 'log_folder'))
     #------------------------------------------------------------------------------

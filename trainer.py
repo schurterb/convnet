@@ -35,10 +35,15 @@ class Trainer(object):
             #Initialize shared variable to store MS of gradient btw updates
             self.vw = ()
             self.vb = ()
-            for layer in range(0, len(self.w)):
-                self.vw = self.vw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX), name='vw'+`layer`) ,)
-                self.vb = self.vb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX), name='vb'+`layer`) ,)      
-            
+            if(self.load_folder == None):
+                for layer in range(0, len(self.w)):
+                    self.vw = self.vw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX), name='vw'+`layer`) ,)
+                    self.vb = self.vb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX), name='vb'+`layer`) ,)      
+            else:
+                for layer in range(0, len(self.w)):
+                    self.vw = self.vw + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_weight_var.csv', delimiter=',').reshape(self.net_shape[layer,:]), name='vw'+`layer`) ,)
+                    self.vb = self.vb + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_bias_var.csv', delimiter=',').reshape(self.net_shape[layer,0]), name='vb'+`layer`) ,)
+                    
             vw_updates = [
                 (r, (self.b2*r) + (1-self.b2)*grad**2)
                 for r, grad in zip(self.vw, w_grads)                   
@@ -65,11 +70,18 @@ class Trainer(object):
             self.mb = ()
             self.vw = ()
             self.vb = ()
-            for layer in range(0, len(self.w)):
-                self.mw = self.mw + (theano.shared(np.zeros(self.net_shape[layer,:], dtype=theano.config.floatX), name='mw'+`layer`) ,)
-                self.mb = self.mb + (theano.shared(np.zeros(self.net_shape[layer,0], dtype=theano.config.floatX), name='mb'+`layer`) ,)
-                self.vw = self.vw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX), name='vw'+`layer`) ,)
-                self.vb = self.vb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX), name='vb'+`layer`) ,)
+            if(self.load_folder == None):
+                for layer in range(0, len(self.w)):
+                    self.mw = self.mw + (theano.shared(np.zeros(self.net_shape[layer,:], dtype=theano.config.floatX), name='mw'+`layer`) ,)
+                    self.mb = self.mb + (theano.shared(np.zeros(self.net_shape[layer,0], dtype=theano.config.floatX), name='mb'+`layer`) ,)
+                    self.vw = self.vw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX), name='vw'+`layer`) ,)
+                    self.vb = self.vb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX), name='vb'+`layer`) ,)
+            else:
+                for layer in range(0, len(self.w)):
+                    self.mw = self.mw + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_weight_mnt.csv', delimiter=',').reshape(self.net_shape[layer,:]), name='mw'+`layer`) ,)
+                    self.mb = self.mb + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_bias_mnt.csv', delimiter=',').reshape(self.net_shape[layer,0]), name='mb'+`layer`) ,)
+                    self.vw = self.vw + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_weight_var.csv', delimiter=',').reshape(self.net_shape[layer,:]), name='vw'+`layer`) ,)
+                    self.vb = self.vb + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_bias_var.csv', delimiter=',').reshape(self.net_shape[layer,0]), name='vb'+`layer`) ,)
             self.t = theano.shared(np.asarray(1, dtype=theano.config.floatX))
             
             mw_updates = [
@@ -186,7 +198,7 @@ class Trainer(object):
                                                      (self.Y, self.Ysub)],
                                            allow_input_downcast=True)
                                 
-        self.reset_counters = theano.function(inputs=[], outputs=[], updates=[(self.batch_counter, [0]), (self.update_counter, [0])])
+        self.reset_counter = theano.function(inputs=[], outputs=[], updates=[(self.batch_counter, [0]), (self.update_counter, [0])])
             
             
     """
@@ -232,6 +244,7 @@ class Trainer(object):
         if(self.learning_method=='RMSprop') or (self.learning_method=='ADAM'): 
             trainer_status += "beta 2 = "+`self.b2`+"\n"
             trainer_status += "damping term = "+`self.damp`+"\n"
+        self.load_folder = kwargs.get('trainer_folder', None)
             
         self.log_interval = kwargs.get('log_interval', 100)
         self.log_folder = kwargs.get('log_folder', '')
@@ -393,7 +406,7 @@ class Trainer(object):
             starttime = time.clock()
             for i in range(0, self.epoch_length):
                 
-                self.reset_counters()
+                self.reset_counter()
                 self.__get_examples()
     
                 for j in range(0, self.log_interval):
