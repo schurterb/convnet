@@ -11,6 +11,7 @@ import theano
 import theano.sandbox.cuda
 from theano import tensor as T
 import numpy as np
+from malis import findMalisLoss
 
 import os
 import time
@@ -23,107 +24,129 @@ theano.config.floatX = 'float32'
 
 class Trainer(object):
     
+    """Define the updates for RMSprop"""
+    def __rmsprop(self, w_grads, b_grads):
+        #Initialize shared variable to store MS of gradient btw updates
+        self.vw = ()
+        self.vb = ()
+        if(self.load_folder == None):
+            for layer in range(0, len(self.w)):
+                self.vw = self.vw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX), name='vw'+`layer`) ,)
+                self.vb = self.vb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX), name='vb'+`layer`) ,)      
+        else:
+            for layer in range(0, len(self.w)):
+                self.vw = self.vw + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_weight_var.csv', delimiter=',').reshape(self.net_shape[layer,:]).astype(theano.config.floatX), name='vw'+`layer`) ,)
+                self.vb = self.vb + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_bias_var.csv', delimiter=',').reshape(self.net_shape[layer,0]).astype(theano.config.floatX), name='vb'+`layer`) ,)
+                
+        vw_updates = [
+            (r, (self.b2*r) + (1-self.b2)*grad**2)
+            for r, grad in zip(self.vw, w_grads)                   
+        ]
+        vb_updates = [
+            (r, (self.b2*r) + (1-self.b2)*grad**2)
+            for r, grad in zip(self.vb, b_grads)                   
+        ]
+        w_updates = [
+            (param, param - self.lr*(grad/(T.sqrt(r) + self.damp)))
+            for param, r, grad in zip(self.w, self.vw, w_grads)                   
+        ]
+        b_updates = [
+            (param, param - self.lr*(grad/(T.sqrt(r) + self.damp)))
+            for param, r, grad in zip(self.b, self.vb, b_grads)
+        ]  
+        return vw_updates + vb_updates + w_updates + b_updates
+        
+        
+    """Define the updates for ADAM"""
+    def __adam(self, w_grads, b_grads):
+        #Initialize shared variable to store the momentum and the 
+            # variance terms btw updates
+        self.mw = ()
+        self.mb = ()
+        self.vw = ()
+        self.vb = ()
+        if(self.load_folder == None):
+            for layer in range(0, len(self.w)):
+                self.mw = self.mw + (theano.shared(np.zeros(self.net_shape[layer,:], dtype=theano.config.floatX), name='mw'+`layer`) ,)
+                self.mb = self.mb + (theano.shared(np.zeros(self.net_shape[layer,0], dtype=theano.config.floatX), name='mb'+`layer`) ,)
+                self.vw = self.vw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX), name='vw'+`layer`) ,)
+                self.vb = self.vb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX), name='vb'+`layer`) ,)
+        else:
+            for layer in range(0, len(self.w)):
+                self.mw = self.mw + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_weight_mnt.csv', delimiter=',').reshape(self.net_shape[layer,:]).astype(theano.config.floatX), name='mw'+`layer`) ,)
+                self.mb = self.mb + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_bias_mnt.csv', delimiter=',').reshape(self.net_shape[layer,0]).astype(theano.config.floatX), name='mb'+`layer`) ,)
+                self.vw = self.vw + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_weight_var.csv', delimiter=',').reshape(self.net_shape[layer,:]).astype(theano.config.floatX), name='vw'+`layer`) ,)
+                self.vb = self.vb + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_bias_var.csv', delimiter=',').reshape(self.net_shape[layer,0]).astype(theano.config.floatX), name='vb'+`layer`) ,)
+        self.t = theano.shared(np.asarray(1, dtype=theano.config.floatX))
+        
+        mw_updates = [
+            (m, (self.b1*m) + ((1- self.b1)*grad))
+            for m, grad in zip(self.mw, w_grads)                   
+        ]
+        mb_updates = [
+            (m, (self.b1*m) + ((1- self.b1)*grad))
+            for m, grad in zip(self.mb, b_grads)                   
+        ]
+        vw_updates = [
+            (v, ((self.b2*v) + (1-self.b2)*(grad**2)) )
+            for v, grad in zip(self.vw, w_grads)                   
+        ]
+        vb_updates = [
+            (v, ((self.b2*v) + (1-self.b2)*(grad**2)) )
+            for v, grad in zip(self.vb, b_grads)                   
+        ]
+        w_updates = [
+            (param, param - self.lr * (m/(1- (self.b1**self.t) ))/(T.sqrt(v/(1- (self.b2**self.t) ))+self.damp))
+            for param, m, v in zip(self.w, self.mw, self.vw)                   
+        ]
+        b_updates = [
+            (param, param - self.lr * ( m/(1- (self.b1**self.t) ))/(T.sqrt( v/(1- (self.b2**self.t) ))+self.damp))
+            for param, m, v in zip(self.b, self.mb, self.vb)                   
+        ]
+        t_update = [
+            (self.t, self.t+1)
+        ]
+        return mw_updates + mb_updates + vw_updates + vb_updates + w_updates + b_updates + t_update
+        
+        
+    """Define the updates for standard SGD"""
+    def __standard(self, w_grads, b_grads):
+        w_updates = [
+            (param, param - self.lr*grad)
+            for param, grad in zip(self.w, w_grads)                   
+        ]
+        b_updates = [
+            (param, param - self.lr*grad)
+            for param, grad in zip(self.b, b_grads)                   
+        ]    
+        return w_updates + b_updates
+        
+        
+    """Define the updates for MALIS training method"""
+    def __malis(self):
+        
+                
+        
+        return;
+        
     
     """Define the updates to be performed each training round"""
     def __perform_updates(self):
         
-        w_grads = T.grad(self.cost, self.w)       
+        w_grads = T.grad(self.cost, self.w)
         b_grads = T.grad(self.cost, self.b)
         
         if(self.learning_method == 'RMSprop'):
-            
-            #Initialize shared variable to store MS of gradient btw updates
-            self.vw = ()
-            self.vb = ()
-            if(self.load_folder == None):
-                for layer in range(0, len(self.w)):
-                    self.vw = self.vw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX), name='vw'+`layer`) ,)
-                    self.vb = self.vb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX), name='vb'+`layer`) ,)      
-            else:
-                for layer in range(0, len(self.w)):
-                    self.vw = self.vw + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_weight_var.csv', delimiter=',').reshape(self.net_shape[layer,:]), name='vw'+`layer`) ,)
-                    self.vb = self.vb + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_bias_var.csv', delimiter=',').reshape(self.net_shape[layer,0]), name='vb'+`layer`) ,)
-                    
-            vw_updates = [
-                (r, (self.b2*r) + (1-self.b2)*grad**2)
-                for r, grad in zip(self.vw, w_grads)                   
-            ]
-            vb_updates = [
-                (r, (self.b2*r) + (1-self.b2)*grad**2)
-                for r, grad in zip(self.vb, b_grads)                   
-            ]
-            w_updates = [
-                (param, param - self.lr*(grad/(T.sqrt(r) + self.damp)))
-                for param, r, grad in zip(self.w, self.vw, w_grads)                   
-            ]
-            b_updates = [
-                (param, param - self.lr*(grad/(T.sqrt(r) + self.damp)))
-                for param, r, grad in zip(self.b, self.vb, b_grads)                   
-            ]    
-            self.updates = vw_updates + vb_updates + w_updates + b_updates
+            self.updates = self.__rmsprop(w_grads, b_grads)
             
         elif(self.learning_method == 'ADAM'):
+            self.updates = self.__adam(w_grads, b_grads)
             
-            #Initialize shared variable to store the momentum and the 
-            # variance terms btw updates
-            self.mw = ()
-            self.mb = ()
-            self.vw = ()
-            self.vb = ()
-            if(self.load_folder == None):
-                for layer in range(0, len(self.w)):
-                    self.mw = self.mw + (theano.shared(np.zeros(self.net_shape[layer,:], dtype=theano.config.floatX), name='mw'+`layer`) ,)
-                    self.mb = self.mb + (theano.shared(np.zeros(self.net_shape[layer,0], dtype=theano.config.floatX), name='mb'+`layer`) ,)
-                    self.vw = self.vw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX), name='vw'+`layer`) ,)
-                    self.vb = self.vb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX), name='vb'+`layer`) ,)
-            else:
-                for layer in range(0, len(self.w)):
-                    self.mw = self.mw + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_weight_mnt.csv', delimiter=',').reshape(self.net_shape[layer,:]), name='mw'+`layer`) ,)
-                    self.mb = self.mb + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_bias_mnt.csv', delimiter=',').reshape(self.net_shape[layer,0]), name='mb'+`layer`) ,)
-                    self.vw = self.vw + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_weight_var.csv', delimiter=',').reshape(self.net_shape[layer,:]), name='vw'+`layer`) ,)
-                    self.vb = self.vb + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_bias_var.csv', delimiter=',').reshape(self.net_shape[layer,0]), name='vb'+`layer`) ,)
-            self.t = theano.shared(np.asarray(1, dtype=theano.config.floatX))
+        elif(self.learning_method == 'MALIS'):
+            self.updates = self.__malis()
             
-            mw_updates = [
-                (m, (self.b1*m) + ((1- self.b1)*grad))
-                for m, grad in zip(self.mw, w_grads)                   
-            ]
-            mb_updates = [
-                (m, (self.b1*m) + ((1- self.b1)*grad))
-                for m, grad in zip(self.mb, b_grads)                   
-            ]
-            vw_updates = [
-                (v, ((self.b2*v) + (1-self.b2)*(grad**2)) )
-                for v, grad in zip(self.vw, w_grads)                   
-            ]
-            vb_updates = [
-                (v, ((self.b2*v) + (1-self.b2)*(grad**2)) )
-                for v, grad in zip(self.vb, b_grads)                   
-            ]
-            w_updates = [
-                (param, param - self.lr * (m/(1- (self.b1**self.t) ))/(T.sqrt(v/(1- (self.b2**self.t) ))+self.damp))
-                for param, m, v in zip(self.w, self.mw, self.vw)                   
-            ]
-            b_updates = [
-                (param, param - self.lr * ( m/(1- (self.b1**self.t) ))/(T.sqrt( v/(1- (self.b2**self.t) ))+self.damp))
-                for param, m, v in zip(self.b, self.mb, self.vb)                   
-            ]
-            t_update = [
-                (self.t, self.t+1)
-            ]
-            self.updates = mw_updates + mb_updates + vw_updates + vb_updates + w_updates + b_updates + t_update
-            
-        else: #The default is standard SGD
-            
-            w_updates = [
-                (param, param - self.lr*grad)
-                for param, grad in zip(self.w, w_grads)                   
-            ]
-            b_updates = [
-                (param, param - self.lr*grad)
-                for param, grad in zip(self.b, b_grads)                   
-            ]    
-            self.updates = w_updates + b_updates
+        else: #The default is standard SGD   
+            self.updates = self.__standard(w_grads,b_grads)
             
             
     """
@@ -132,7 +155,7 @@ class Trainer(object):
     def __set_log(self):
         self.error = theano.shared(np.zeros(self.log_interval, dtype=theano.config.floatX), name='error')
         self.update_counter = theano.shared(np.zeros(1, dtype='int32'), name='update_counter') 
-                                        
+        
         log_updates = [
             (self.error, T.set_subtensor(self.error[self.update_counter], self.cost)),
             (self.update_counter, self.update_counter +1),
@@ -166,15 +189,6 @@ class Trainer(object):
         ]
         outputs, x_updates = theano.scan(lambda:scan_vals, n_steps=self.batch_size)
         self.updates = x_updates + self.updates 
-        
-        
-    """
-    Loop through the specified number of updates strictly using the GPU before
-    reporting back to log the current status
-    """
-    def __update_loop(self):
-        
-        outputs, self.updates = theano.scan(lambda x, y: self.updates, non_sequences = [self.X, self.Y], n_steps=self.log_interval)
 
   
     """
@@ -183,22 +197,26 @@ class Trainer(object):
     def __theano_training_model(self):
         
         self.__perform_updates()
-        
+            
         self.__set_log()
         
-        self.__load_batch()
-        
-#        #Using this update loop can speed up computation; however, it also uses a significant amount of GPU memory,
-#        # which prevents extremely large networks from being trained.
-#        self.__update_loop()
-        
-        self.train_model = theano.function(inputs=[], outputs=[],
-                                           updates = self.updates,
-                                           givens = [(self.X, self.Xsub),
-                                                     (self.Y, self.Ysub)],
-                                           allow_input_downcast=True)
-                                
-        self.reset_counter = theano.function(inputs=[], outputs=[], updates=[(self.batch_counter, [0]), (self.update_counter, [0])])
+        if(self.learning_method == 'MALIS'):                                               
+            self.malis_forward = theano.function(inputs = [self.X], outputs = [self.out],
+                                                 allow_input_downcast=True)
+            self.malis_backward = theano.function(inputs = [self.grad], outputs = [],
+                                                  updates = self.updates,
+                                                  allow_input_downcast=True)
+            
+        else:            
+            self.__load_batch()
+            
+            self.train_model = theano.function(inputs=[], outputs=[],
+                                               updates = self.updates,
+                                               givens = [(self.X, self.Xsub),
+                                                         (self.Y, self.Ysub)],
+                                               allow_input_downcast=True)
+                                    
+            self.reset_counter = theano.function(inputs=[], outputs=[], updates=[(self.batch_counter, [0]), (self.update_counter, [0])])
             
             
     """
