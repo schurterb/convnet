@@ -34,6 +34,7 @@ class AffinityGraphCompare{
 //     	cout << "dims: "<<dims[0]<<" "<<dims[1]<<" "<<dims[2]<<" "<<dims[3]<<endl;
 //     	cout << "marginArg: "<<marginArg<< " posArg: "<<posArg<<endl;
          // 4d connectivity graph [y * x * z * #edges]
+       
      	const int	conn_num_dims		= 4;
      	const int*	conn_dims			= dims;
      	const float*	conn_data		= conn;
@@ -53,6 +54,7 @@ class AffinityGraphCompare{
          // (times the derivative of the logistic activation function) [y * x * z * #edges]
          float* dloss_data = losses;
 
+        
         /* Cache for speed to access neighbors */
         int nVert = 1;
         for (int i=0; i<conn_num_dims-1; ++i)
@@ -88,6 +90,7 @@ class AffinityGraphCompare{
                 nPairPos +=(unsigned long) (segSizes[seg_data[i]]-1);
             }
         }
+
         unsigned long nPairTot = (nLabeledVert*(nLabeledVert-1))/2;
         unsigned long nPairNeg = nPairTot - nPairPos;
         unsigned long nPairNorm;
@@ -110,7 +113,9 @@ class AffinityGraphCompare{
                         if ( x > 0 && y > 0 && z > 0 )
                             pqueue[ j++ ] = i;
                     }
+
         sort( pqueue.begin(), pqueue.end(), AffinityGraphCompare<float>( conn_data ) );
+
 
 //        cout << "malis MST..." << endl;
 //        cout << "pqueue.size: " << pqueue.size() << endl;
@@ -125,12 +130,16 @@ class AffinityGraphCompare{
     
         /* Start Kruskal's */
         for (unsigned int i = 0; i < pqueue.size(); ++i ) {
-            //cout << i << endl;
+            //cerr << i << endl;
             minEdge = pqueue[i];
             e = minEdge/nVert; v1 = minEdge%nVert; v2 = v1+nHood[e];
     
+            //cerr << "v1: " << v1 << endl;
             set1 = dsets.find_set(v1);
+            //cerr << "v2: " << v2 << endl;
             set2 = dsets.find_set(v2);
+            //cerr << "dsets found\n";
+
             if (set1!=set2){
                 dsets.link(set1, set2);
     
@@ -197,4 +206,3 @@ class AffinityGraphCompare{
         *lossReturn = loss;
         *randIndexReturn = 1.0 - ((double)nPairIncorrect / (double)nPairNorm);
      }
-

@@ -14,7 +14,7 @@ from analyzer import Analyzer
 from load_data import LoadData
 
 
-results_folder = 'results/deep_nets_3/backups2/'
+results_folder = 'results/deep_nets_3/'#backups2/'
 #results_folder = ''
 
 

@@ -8,10 +8,7 @@ Analyzer class to perform a basic analysis of the results from training and
  testing a convolutional network
 """
 import sys
-sys.path.append('randIndex')
-#from visualizeStats import show_stats
-#sys.path.append('randIndex')
-from visualizeStats import showStats
+from analysis import showStats
 
 import numpy as np
 import matplotlib.pyplot as plt

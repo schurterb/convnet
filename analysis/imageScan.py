@@ -29,7 +29,7 @@ import h5py
 
 
 #Displays three images: the raw data, the corresponding labels, and the predictions
-def display(raw, label, pred, im_size):
+def display(raw, label, pred, im_size, depthInit=1):
     #fig = plt.figure(figsize=(20,10))
     fig = plt.figure()
     fig.set_facecolor('white')
@@ -39,17 +39,17 @@ def display(raw, label, pred, im_size):
     depth0 = 0
 
     #Image is grayscale
-    im1 = ax1.imshow(raw[1,:,:],cmap=cm.Greys_r)
+    im1 = ax1.imshow(raw[depthInit,:,:],cmap=cm.Greys_r)
     ax1.set_title('Raw Image')
 
     im = np.zeros((im_size,im_size,3))
-    im[:,:,:]=label[:,:,1,:]
-    im2 = ax2.imshow(im)
+    #im[:,:,:]=label[depthInit,:,:,0]
+    im2 = ax2.imshow(label[depthInit,:,:,:])
     ax2.set_title('Groundtruth')
 
     im_ = np.zeros((im_size,im_size,3))
-    im_[:,:,:]=pred[:,:,1,:]
-    im3 = ax3.imshow(im_)
+    #im_[:,:,:]=pred[depthInit,:,:,0]
+    im3 = ax3.imshow(pred[depthInit,:,:,:])
     ax3.set_title('Predictions')
     
     axdepth = fig.add_axes([0.25, 0.3, 0.65, 0.03], axisbg='white')
@@ -61,10 +61,10 @@ def display(raw, label, pred, im_size):
     def update(val):
         z = int(depth.val)
         im1.set_data(raw[z,:,:])
-        im[:,:,:]=label[:,:,z,:]
-        im2.set_data(im)
-        im_[:,:,:]=pred[:,:,z,:]
-        im3.set_data(im_)
+        #im[:,:,:]=label[z,:,:,0]
+        im2.set_data(label[z,:,:,:])
+        #im_[:,:,:]=pred[z,:,:,0]
+        im3.set_data(pred[z,:,:,:])
         fig.canvas.draw()
     depth.on_changed(update)
     plt.show()
