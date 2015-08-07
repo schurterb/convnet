@@ -7,8 +7,9 @@ Created on Thu Jun 25 10:39:19 2015
 Analyzer class to perform a basic analysis of the results from training and 
  testing a convolutional network
 """
-import sys
+
 from analysis import showStats
+from scipy.io import loadmat
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -142,7 +143,49 @@ class Analyzer(object):
     """Plots the data from threshold_scan"""
     def performance(self):
         
-        showStats(self.results_folder)
+        
+        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(nrows=2, ncols=2)        
+        #fig.set_facecolor('white')
+        
+        for i in range(len(self.results_folder)):
+            mData = loadmat(self.results_folder[i] + 'errors_new.mat')
+        
+            #Show rand Index results
+            rTheta = mData.get('r_thresholds')[0]
+            rErr = mData.get('r_fscore')[0]
+            rFPR = mData.get('r_fp')[0]/mData.get('r_neg')[0]
+            rTPR = mData.get('r_tp')[0]/mData.get('r_pos')[0]
+        
+            ax1.plot(rTheta,rErr,label=self.name[i])
+            ax1.set_title('Rand F-Score', fontsize=20)
+            ax1.set_ylabel('f-score', fontsize=20)
+            ax1.set_xlabel('threshold', fontsize=20)
+            
+            ax2.plot(rFPR, rTPR,label=self.name[i])
+            ax2.set_ylim([0,1])
+            ax2.set_title('Rand ROC', fontsize=20)
+            ax2.set_ylabel('true-positive rate', fontsize=20)
+            ax2.set_xlabel('false-positive rate', fontsize=20)
+            
+            #Show pixel error results
+            pTheta = mData.get('p_thresholds')[0]
+            pErr = mData.get('p_err')[0]
+            pFPR = mData.get('p_fp')[0]/mData.get('p_neg')[0]
+            pTPR = mData.get('p_tp')[0]/mData.get('p_pos')[0]
+        
+            ax3.plot(pTheta,pErr,label=self.name[i])
+            ax3.set_title('Pixel Error', fontsize=20)
+            ax3.set_ylabel('pixel error', fontsize=20)
+            ax3.set_xlabel('threshold', fontsize=20)
+        
+            ax4.plot(pFPR, pTPR,label=self.name[i])
+            ax4.set_ylim([0,1])
+            ax4.set_title('Pixel ROC', fontsize=20)
+            ax4.set_ylabel('true-positive rate', fontsize=20)
+            ax4.set_xlabel('false-positive rate', fontsize=20)
+            
+        ax1.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=2, borderaxespad=0., prop={'size':20})
+        ax1.grid(); ax2.grid(); ax3.grid(); ax4.grid();
         
         return;
   

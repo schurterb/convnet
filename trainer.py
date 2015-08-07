@@ -138,15 +138,15 @@ class Trainer(object):
         self.grad = T.tensor4('grad')
         self.out = self.out.dimshuffle(0,4,3,2,1)
         
-        w_grads = T.grad(self.out, self.w)
-        b_grads = T.grad(self.out, self.b)
+        w_grads = T.grad(self.out[0,0,0,0,0], self.w)
+        b_grads = T.grad(self.out[0,0,0,0,0], self.b)
                 
         w_updates = [
-            (param, param - self.lr*self.grad*pgrad)
+            (param, param - self.lr*self.grad[0,0,0,0]*pgrad)
             for param, pgrad in zip(self.w, w_grads)                   
         ]
         b_updates = [
-            (param, param - self.lr*self.grad*pgrad)
+            (param, param - self.lr*self.grad[0,0,0,0]*pgrad)
             for param, pgrad in zip(self.b, b_grads)                   
         ]    
         return w_updates + b_updates
@@ -230,10 +230,10 @@ class Trainer(object):
             self.Ysub = theano.shared(np.zeros(self.output_shape, 
                                                dtype = theano.config.floatX), name='Ysub')  
                                                
-            self.malis_forward = theano.function(inputs = [], outputs = [self.out],
+            self.malis_forward = theano.function(inputs = [], outputs = self.out,
                                                  givens = [(self.X, self.Xsub)],
                                                  allow_input_downcast=True)
-            self.malis_backward = theano.function(inputs = [self.grad], outputs = [self.pixerr],
+            self.malis_backward = theano.function(inputs = [self.grad], outputs = self.pixerr,
                                                   updates = self.updates,
                                                   givens = [(self.X, self.Xsub),
                                                             (self.Y, self.Ysub)],
@@ -351,9 +351,11 @@ class Trainer(object):
         #If there are ground-truth segmentations to load, load them into cpu memory 
         # (they aren't needed on the gpu)
         if (train_seg != None) and (type(train_seg) == tuple):
-            self.segmentations = train_seg
+            self.segmentations = ()
+            for seg in train_seg:
+                self.segmentations = (np.asarray(seg, dtype=np.intc, order='F') ,)
         elif (train_seg != None):
-            self.segmentations = (train_seg ,)
+            self.segmentations = (np.asarray(train_seg, dtype=np.intc, order='F') ,)
         else:
             print "No groundtruth segmentations provided."
             
@@ -405,15 +407,15 @@ class Trainer(object):
     def __set_chunk(self):
         idx = self.rng.randint(0, self.num_dsets)
         sample = self.rng.randint(0, self.data_size[idx] - (self.batch_size+self.seg), 3)
-        self.Xsub.set_value(self.training_data[idx].get_value(borrow=True)[sample[0]:sample[0]+self.batch_size+self.seg,
-                                                                           sample[1]:sample[1]+self.batch_size+self.seg,
-                                                                           sample[2]:sample[2]+self.batch_size+self.seg].dimshuffle(2,1,0,'x'), borrow=True)
-        self.Ysub.set_value(self.training_labels[idx].get_value(borrow=True)[:, sample[0]:sample[0]+self.batch_size,
+        self.Xsub.set_value(self.training_data[idx].get_value(borrow=True)[sample[0]:sample[0]+self.batch_size+(self.seg-1),
+                                                                           sample[1]:sample[1]+self.batch_size+(self.seg-1),
+                                                                           sample[2]:sample[2]+self.batch_size+(self.seg-1)].reshape((self.batch_size+(self.seg-1),self.batch_size+(self.seg-1),self.batch_size+(self.seg-1),1)), borrow=True)
+        self.Ysub.set_value(np.transpose(self.training_labels[idx].get_value(borrow=True)[:, sample[0]:sample[0]+self.batch_size,
                                                                                 sample[1]:sample[1]+self.batch_size,
-                                                                                sample[2]:sample[2]+self.batch_size].dimshuffle(3,2,1,0), borrow=True)
-        self.compTrue = np.tranpose(self.segmentations[idx], (2,1,0))[sample[0]:sample[0]+self.batch_size,
-                                                                      sample[1]:sample[1]+self.batch_size,
-                                                                      sample[2]:sample[2]+self.batch_size,:]
+                                                                                sample[2]:sample[2]+self.batch_size]), borrow=True)
+        self.compTrue = np.transpose(self.segmentations[idx], (2,1,0))[sample[0]:sample[0]+self.batch_size,
+                                                                       sample[1]:sample[1]+self.batch_size,
+                                                                       sample[2]:sample[2]+self.batch_size]
         
         
     """
@@ -496,12 +498,17 @@ class Trainer(object):
             for i in range(0, self.epoch_length):
                     
                 if(self.learning_method == 'malis'):
-                    self.__set_chunck()
-                    prediction = self.malis_foward()
+                    self.__set_chunk()
+                    prediction = self.malis_forward()
+                    print "malis prediction successful\n"
                     dloss, randIndex, totLoss = findMalisLoss(self.compTrue, 
-                                                              self.Ysub.get_value(borrow=True),
-                                                              prediction)
+                                                              self.Ysub.get_value(borrow=True).astype(dtype='f', order='F'),
+                                                              prediction.reshape((self.batch_size, self.batch_size, self.batch_size, 3)).astype(dtype='f', order='F'))
+                    print "malis loss calculation successful"
+                    print "randIndex:",randIndex,"\n"
                     train_error[i] = self.malis_backward(dloss)
+                    print "malis back propogation successful"
+                    print "Current pixel error:",train_error[i]
                 else:
                     self.reset_counter()
                     self.__set_batches()

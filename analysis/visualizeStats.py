@@ -17,7 +17,7 @@ def showStats(dataFile):
     
     makeErrorCurves(data0, data1, data2, data3, fig_axes)
         
-
+    return data0, data2
 #    for dFile in dataFile:
 #        mData = loadmat(dFile + 'errors_new.mat')
 #    

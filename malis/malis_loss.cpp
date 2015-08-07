@@ -2030,7 +2030,7 @@ static PyObject *__pyx_pf_5malis_10malis_loss_findMalisLoss(CYTHON_UNUSED PyObje
  * 
  *     malisLoss(&dims[0], &affneg[0,0,0,0], &nhood[0,0], &compTrue[0,0,0], 0.3, True, &dloss_n[0,0,0,0], &lossAvg_n[0], &randIndex_n[0])             # <<<<<<<<<<<<<<
  * 
- *     dloss = dloss_p - dloss_n
+ *     dloss = dloss_p + dloss_n
  */
   __pyx_t_33 = 0;
   __pyx_t_13 = -1;
@@ -2152,18 +2152,18 @@ static PyObject *__pyx_pf_5malis_10malis_loss_findMalisLoss(CYTHON_UNUSED PyObje
   /* "malis/malis_loss.pyx":42
  *     malisLoss(&dims[0], &affneg[0,0,0,0], &nhood[0,0], &compTrue[0,0,0], 0.3, True, &dloss_n[0,0,0,0], &lossAvg_n[0], &randIndex_n[0])
  * 
- *     dloss = dloss_p - dloss_n             # <<<<<<<<<<<<<<
+ *     dloss = dloss_p + dloss_n             # <<<<<<<<<<<<<<
  *     lossAvg = (lossAvg_p + lossAvg_n)/2.0
  *     randIndex = (randIndex_p + randIndex_n)/2.0
  */
-  __pyx_t_3 = PyNumber_Subtract(((PyObject *)__pyx_v_dloss_p), ((PyObject *)__pyx_v_dloss_n)); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 42; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_3 = PyNumber_Add(((PyObject *)__pyx_v_dloss_p), ((PyObject *)__pyx_v_dloss_n)); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 42; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_v_dloss = __pyx_t_3;
   __pyx_t_3 = 0;
 
   /* "malis/malis_loss.pyx":43
  * 
- *     dloss = dloss_p - dloss_n
+ *     dloss = dloss_p + dloss_n
  *     lossAvg = (lossAvg_p + lossAvg_n)/2.0             # <<<<<<<<<<<<<<
  *     randIndex = (randIndex_p + randIndex_n)/2.0
  * 
@@ -2177,7 +2177,7 @@ static PyObject *__pyx_pf_5malis_10malis_loss_findMalisLoss(CYTHON_UNUSED PyObje
   __pyx_t_5 = 0;
 
   /* "malis/malis_loss.pyx":44
- *     dloss = dloss_p - dloss_n
+ *     dloss = dloss_p + dloss_n
  *     lossAvg = (lossAvg_p + lossAvg_n)/2.0
  *     randIndex = (randIndex_p + randIndex_n)/2.0             # <<<<<<<<<<<<<<
  * 
@@ -2196,7 +2196,7 @@ static PyObject *__pyx_pf_5malis_10malis_loss_findMalisLoss(CYTHON_UNUSED PyObje
  * 
  *     dloss = np.transpose(dloss.reshape((affEst.shape[3], affEst.shape[2], affEst.shape[1], affEst.shape[0])), (3,2,1,0))             # <<<<<<<<<<<<<<
  * 
- *     return dloss_p, dloss_n, 1-randIndex, lossAvg
+ *     return dloss, 1-randIndex, lossAvg
  */
   __pyx_t_5 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 46; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_5);
@@ -2286,23 +2286,20 @@ static PyObject *__pyx_pf_5malis_10malis_loss_findMalisLoss(CYTHON_UNUSED PyObje
   /* "malis/malis_loss.pyx":48
  *     dloss = np.transpose(dloss.reshape((affEst.shape[3], affEst.shape[2], affEst.shape[1], affEst.shape[0])), (3,2,1,0))
  * 
- *     return dloss_p, dloss_n, 1-randIndex, lossAvg             # <<<<<<<<<<<<<<
+ *     return dloss, 1-randIndex, lossAvg             # <<<<<<<<<<<<<<
  */
   __Pyx_XDECREF(__pyx_r);
   __pyx_t_3 = PyNumber_Subtract(__pyx_int_1, __pyx_v_randIndex); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 48; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_2 = PyTuple_New(4); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 48; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = PyTuple_New(3); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 48; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_2);
-  __Pyx_INCREF(((PyObject *)__pyx_v_dloss_p));
-  PyTuple_SET_ITEM(__pyx_t_2, 0, ((PyObject *)__pyx_v_dloss_p));
-  __Pyx_GIVEREF(((PyObject *)__pyx_v_dloss_p));
-  __Pyx_INCREF(((PyObject *)__pyx_v_dloss_n));
-  PyTuple_SET_ITEM(__pyx_t_2, 1, ((PyObject *)__pyx_v_dloss_n));
-  __Pyx_GIVEREF(((PyObject *)__pyx_v_dloss_n));
-  PyTuple_SET_ITEM(__pyx_t_2, 2, __pyx_t_3);
+  __Pyx_INCREF(__pyx_v_dloss);
+  PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_v_dloss);
+  __Pyx_GIVEREF(__pyx_v_dloss);
+  PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_t_3);
   __Pyx_GIVEREF(__pyx_t_3);
   __Pyx_INCREF(__pyx_v_lossAvg);
-  PyTuple_SET_ITEM(__pyx_t_2, 3, __pyx_v_lossAvg);
+  PyTuple_SET_ITEM(__pyx_t_2, 2, __pyx_v_lossAvg);
   __Pyx_GIVEREF(__pyx_v_lossAvg);
   __pyx_t_3 = 0;
   __pyx_r = __pyx_t_2;
@@ -4513,7 +4510,7 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  *     dloss = np.transpose(dloss.reshape((affEst.shape[3], affEst.shape[2], affEst.shape[1], affEst.shape[0])), (3,2,1,0))             # <<<<<<<<<<<<<<
  * 
- *     return dloss_p, dloss_n, 1-randIndex, lossAvg
+ *     return dloss, 1-randIndex, lossAvg
  */
   __pyx_tuple__6 = PyTuple_Pack(4, __pyx_int_3, __pyx_int_2, __pyx_int_1, __pyx_int_0); if (unlikely(!__pyx_tuple__6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 46; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_tuple__6);

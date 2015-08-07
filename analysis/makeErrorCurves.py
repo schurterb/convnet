@@ -9,23 +9,23 @@ def makeErrorCurves((pThresholds, pErr, pTp, pFp, pPos, pNeg, pSqErr),(minThresh
     fig.set_facecolor('white')
 
     labels(ax1,"Threshold","Rand F-Score","Rand F-Score")
-    ax1.plot(rThresholds,rErr)
+    ax1.plot(rThresholds[0],rErr[0])
     # ax1.set_xlim([rThresholds[minThreshIdxRand], rThresholds[maxThreshIdxRand]])
 
     labels(ax2,"False Positive","True Positive","Rand Error ROC") #todo: do this beforehand?
-    rFpRate = rFp/rNeg
-    rFpRate, idxs = np.sort(rFpRate),np.argsort(rFpRate)
-    rTpRate = rTp[idxs]/rPos
+#    rFpRate = rFp/rNeg
+#    rFpRate, idxs = np.sort(rFpRate),np.argsort(rFpRate)
+#    rTpRate = rTp[idxs]/rPos
     # check to make sure it is monotonically increasing
-    ax2.plot(rFpRate,rTpRate)
+    ax2.plot(rFp[0]/rNeg[0],rTp[0]/rPos[0])
     ax2.set_ylim([0,1])
 
     labels(ax3,"Threshold","Pixel Error","Pixel Error")
-    ax3.plot(pThresholds,pErr)
+    ax3.plot(pThresholds[0],pErr[0])
     # ax3.set_xlim([pThresholds[minThresholdIdxPixel], pThresholds[maxThresholdIdxPixel]])
 
     labels(ax4,"False Positive","True Positive","Pixel Error ROC")
-    ax4.plot(pFp/pNeg,pTp/pPos)
+    ax4.plot(pFp[0]/pNeg[0],pTp[0]/pPos[0])
     ax4.set_ylim([0,1])
 
 
