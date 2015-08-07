@@ -42,5 +42,7 @@ def findMalisLoss(np.ndarray[int, ndim=3] compTrue,
     dloss = dloss_p - dloss_n
     lossAvg = (lossAvg_p + lossAvg_n)/2.0
     randIndex = (randIndex_p + randIndex_n)/2.0
+        
+    dloss = np.transpose(dloss.reshape((affEst.shape[3], affEst.shape[2], affEst.shape[1], affEst.shape[0])), (3,2,1,0))    
     
-    return dloss, randIndex, lossAvg
+    return dloss_p, dloss_n, 1-randIndex, lossAvg

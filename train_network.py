@@ -35,7 +35,8 @@ def train_network(config_file):
     #Load the data for training
     training_data = LoadData(directory = config.get('Training Data', 'folders').split(','), 
                              data_file_name = config.get('Training Data', 'data_file'),
-                             label_file_name = config.get('Training Data', 'label_file'))
+                             label_file_name = config.get('Training Data', 'label_file'),
+                             seg_file_name = config.get('Training Data', 'seg_file'))
     #------------------------------------------------------------------------------
                              
     starttime=time.clock()
@@ -47,7 +48,7 @@ def train_network(config_file):
                       cost_func = config.get('Network', 'cost_func'))
          
         print 'Initializing Trainer'             
-        network_trainer = Trainer(network, training_data.get_data(), training_data.get_labels(), 
+        network_trainer = Trainer(network, training_data.get_data(), training_data.get_labels(), training_data.get_segments(),
                               batch_size = config.getint('Training', 'batch_size'),
                               learning_method = config.get('Training', 'learning_method'),
                               learning_rate = config.getfloat('Training', 'learning_rate'), 

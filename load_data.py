@@ -20,20 +20,28 @@ class LoadData(object):
             if (type(self.folder) == tuple) or (type(self.folder) == list):
                 self.data_file = ()
                 self.label_file = ()
+                self.seg_file = ()
                 self.x = ()
                 self.y = ()
+                self.z = ()
                 for folder in self.folder:
                     self.data_file += (h5py.File(folder + self.data_file_name, 'r') ,)
                     self.x += (self.data_file[-1]['main'] ,)
                     
                     self.label_file += (h5py.File(folder + self.label_file_name, 'r') ,)
                     self.y += (self.label_file[-1]['main'] ,)
+                    
+                    self.seg_file += (h5py.File(folder + self.seg_file_name, 'r') ,)
+                    self.z += (self.seg_file[-1]['main'] ,)
             else:
                 self.data_file = (h5py.File(self.folder + self.data_file_name, 'r') ,)
                 self.x = (self.data_file[-1]['main'] ,)
                 
                 self.label_file = (h5py.File(self.folder + self.label_file_name, 'r') ,)
                 self.y = (self.label_file[-1]['main'] ,)
+                
+                self.seg_file = (h5py.File(self.folder + self.seg_file_name, 'r') ,)
+                self.z = (self.seg_file[-1]['main'] ,)
             
         else:   
             raise TypeError("Unsupported file type")
@@ -48,6 +56,7 @@ class LoadData(object):
          self.folder = kwargs.get('directory', '')
          self.data_file_name = kwargs.get('data_file_name', None)
          self.label_file_name = kwargs.get('label_file_name', None)
+         self.seg_file_name = kwargs.get('seg_file_name', None)
          self.file_type = kwargs.get('file_type', 'hdf5')
 
          self.home_folder = os.getcwd() + '/'
@@ -64,14 +73,19 @@ class LoadData(object):
     """Return the label set"""
     def get_labels(self):
         return self.y
+        
+    """Return the label set"""
+    def get_segments(self):
+        return self.z
          
     """
     Close the data and label files
     In the case of hdf5 files, the data will no longer be accessible after this.
     """
     def close(self):
-        for dfile, lfile in zip(self.data_file, self.label_file):
+        for dfile, lfile, sfile in zip(self.data_file, self.label_file, self.seg_file):
             dfile.close()
             lfile.close()
+            sfile.close()
         
     

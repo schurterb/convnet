@@ -25,7 +25,10 @@ theano.config.floatX = 'float32'
 class Trainer(object):
     
     """Define the updates for RMSprop"""
-    def __rmsprop(self, w_grads, b_grads):
+    def __rmsprop(self):
+                
+        w_grads = T.grad(self.cost, self.w)
+        b_grads = T.grad(self.cost, self.b)
         #Initialize shared variable to store MS of gradient btw updates
         self.vw = ()
         self.vb = ()
@@ -58,7 +61,10 @@ class Trainer(object):
         
         
     """Define the updates for ADAM"""
-    def __adam(self, w_grads, b_grads):
+    def __adam(self):
+                
+        w_grads = T.grad(self.cost, self.w)
+        b_grads = T.grad(self.cost, self.b)
         #Initialize shared variable to store the momentum and the 
             # variance terms btw updates
         self.mw = ()
@@ -110,7 +116,11 @@ class Trainer(object):
         
         
     """Define the updates for standard SGD"""
-    def __standard(self, w_grads, b_grads):
+    def __standard(self):
+
+        w_grads = T.grad(self.cost, self.w)
+        b_grads = T.grad(self.cost, self.b)        
+        
         w_updates = [
             (param, param - self.lr*grad)
             for param, grad in zip(self.w, w_grads)                   
@@ -125,49 +135,61 @@ class Trainer(object):
     """Define the updates for MALIS training method"""
     def __malis(self):
         
-                
+        self.grad = T.tensor4('grad')
+        self.out = self.out.dimshuffle(0,4,3,2,1)
         
-        return;
+        w_grads = T.grad(self.out, self.w)
+        b_grads = T.grad(self.out, self.b)
+                
+        w_updates = [
+            (param, param - self.lr*self.grad*pgrad)
+            for param, pgrad in zip(self.w, w_grads)                   
+        ]
+        b_updates = [
+            (param, param - self.lr*self.grad*pgrad)
+            for param, pgrad in zip(self.b, b_grads)                   
+        ]    
+        return w_updates + b_updates
         
     
     """Define the updates to be performed each training round"""
-    def __perform_updates(self):
-        
-        w_grads = T.grad(self.cost, self.w)
-        b_grads = T.grad(self.cost, self.b)
-        
+    def __perform_updates(self):        
         if(self.learning_method == 'RMSprop'):
-            self.updates = self.__rmsprop(w_grads, b_grads)
+            self.updates = self.__rmsprop()
             
         elif(self.learning_method == 'ADAM'):
-            self.updates = self.__adam(w_grads, b_grads)
+            self.updates = self.__adam()
             
-        elif(self.learning_method == 'MALIS'):
+        elif(self.learning_method == 'malis'):
             self.updates = self.__malis()
             
         else: #The default is standard SGD   
-            self.updates = self.__standard(w_grads,b_grads)
+            self.updates = self.__standard()
             
             
     """
     Record the cost for the current batch
     """
     def __set_log(self):
-        self.error = theano.shared(np.zeros(self.log_interval, dtype=theano.config.floatX), name='error')
-        self.update_counter = theano.shared(np.zeros(1, dtype='int32'), name='update_counter') 
-        
-        log_updates = [
-            (self.error, T.set_subtensor(self.error[self.update_counter], self.cost)),
-            (self.update_counter, self.update_counter +1),
-        ]
-        self.updates = log_updates + self.updates
+        if(self.learning_method == 'malis'):
+            self.Y = T.tensor4('Y')
+            self.pixerr = T.mean(1/2.0*((self.out - self.Y.dimshuffle('x',0,1,2,3))**2), dtype=theano.config.floatX) 
+            
+        else:
+            self.error = theano.shared(np.zeros(self.log_interval, dtype=theano.config.floatX), name='error')
+            self.update_counter = theano.shared(np.zeros(1, dtype='int32'), name='update_counter')             
+            log_updates = [
+                (self.error, T.set_subtensor(self.error[self.update_counter], self.cost)),
+                (self.update_counter, self.update_counter +1),
+            ]
+            self.updates = log_updates + self.updates
     
     
     """
     Set the training examples for the current batch based on the sample values
     """
     def __load_batch(self): 
-        self.batch = theano.shared(np.zeros((3, self.batch_size), 
+        self.batch = theano.shared(np.zeros((4, self.batch_size), 
                                      dtype = 'int32'), name='batch')
         self.batch_counter = theano.shared(np.zeros(1, dtype='int32'), name='batch_counter') 
         self.index = theano.shared(np.zeros(1, dtype='int32'), name='index')                
@@ -179,12 +201,14 @@ class Trainer(object):
                 
         scan_vals = [
             (self.index, self.batch_counter - (self.update_counter*self.batch_size) ),
-            (self.Xsub, T.set_subtensor(self.Xsub[:,:,:,self.index[0]], self.training_data[0][self.batch[0, self.batch_counter[0]]:self.batch[0, self.batch_counter[0]] +self.seg, 
-                                                                                              self.batch[1, self.batch_counter[0]]:self.batch[1, self.batch_counter[0]] +self.seg, 
-                                                                                              self.batch[2, self.batch_counter[0]]:self.batch[2, self.batch_counter[0]] +self.seg]) ),
-            (self.Ysub, T.set_subtensor(self.Ysub[:,self.index[0]], self.training_labels[0][:, self.batch[0, self.batch_counter[0]]+self.offset, 
-                                                                                               self.batch[1, self.batch_counter[0]]+self.offset, 
-                                                                                               self.batch[2, self.batch_counter[0]]+self.offset]) ),
+            (self.Xsub, T.set_subtensor(self.Xsub[:,:,:,self.index[0]], self.training_data[self.batch.get_value(borrow=True)[0, self.batch_counter.get_value(borrow=True)[0]]]
+                                                                                          [self.batch[1, self.batch_counter[0]]:self.batch[1, self.batch_counter[0]] +self.seg, 
+                                                                                           self.batch[2, self.batch_counter[0]]:self.batch[2, self.batch_counter[0]] +self.seg, 
+                                                                                           self.batch[3, self.batch_counter[0]]:self.batch[3, self.batch_counter[0]] +self.seg]) ),
+            (self.Ysub, T.set_subtensor(self.Ysub[:,self.index[0]], self.training_labels[self.batch.get_value(borrow=True)[0, self.batch_counter.get_value(borrow=True)[0]]]
+                                                                                        [:, self.batch[1, self.batch_counter[0]]+self.offset, 
+                                                                                            self.batch[2, self.batch_counter[0]]+self.offset, 
+                                                                                            self.batch[3, self.batch_counter[0]]+self.offset])),
             (self.batch_counter, self.batch_counter+1)
         ]
         outputs, x_updates = theano.scan(lambda:scan_vals, n_steps=self.batch_size)
@@ -192,7 +216,7 @@ class Trainer(object):
 
   
     """
-    Define the function for GPU training
+    Define the function(s) for GPU training
     """
     def __theano_training_model(self):
         
@@ -200,11 +224,19 @@ class Trainer(object):
             
         self.__set_log()
         
-        if(self.learning_method == 'MALIS'):                                               
-            self.malis_forward = theano.function(inputs = [self.X], outputs = [self.out],
+        if(self.learning_method == 'malis'):  
+            self.Xsub = theano.shared(np.zeros(self.input_shape,
+                                               dtype = theano.config.floatX), name='Xsub')
+            self.Ysub = theano.shared(np.zeros(self.output_shape, 
+                                               dtype = theano.config.floatX), name='Ysub')  
+                                               
+            self.malis_forward = theano.function(inputs = [], outputs = [self.out],
+                                                 givens = [(self.X, self.Xsub)],
                                                  allow_input_downcast=True)
-            self.malis_backward = theano.function(inputs = [self.grad], outputs = [],
+            self.malis_backward = theano.function(inputs = [self.grad], outputs = [self.pixerr],
                                                   updates = self.updates,
+                                                  givens = [(self.X, self.Xsub),
+                                                            (self.Y, self.Ysub)],
                                                   allow_input_downcast=True)
             
         else:            
@@ -225,7 +257,7 @@ class Trainer(object):
      its cost function (second parameter), its shared weight and bias 
      variables (second and third parameters, rspectively)
     """
-    def __init__(self, network, train_data, train_labels, **kwargs):
+    def __init__(self, network, train_data, train_labels, train_seg = None, **kwargs):
         #Network parameters
         self.X = network.X
         self.Y = network.Y
@@ -235,7 +267,6 @@ class Trainer(object):
         self.b = network.b
         self.net_shape = network.net_shape
         
-        #Training parameters
         trainer_status = "\n### Convolutional Network Trainer Log ###\n\n"
         trainer_status += "Network Parameters\n"
         trainer_status += "num layers = "+ `network.num_layers` +"\n"
@@ -245,6 +276,7 @@ class Trainer(object):
                 
         self.rng = kwargs.get('rng', np.random.RandomState(42))
         
+        #Training parameters
         trainer_status += "Trainer Parameters\n"
         trainer_status += "cost function = "+ `network.cost_func` +"\n"
         self.learning_method = kwargs.get('learning_method', 'standardSGD')
@@ -269,8 +301,12 @@ class Trainer(object):
         
         self.seg = int(self.net_shape.shape[0]*(self.net_shape[0,1] -1) +1)
         self.offset = (self.seg -1)/2    
-        self.input_shape = (self.seg, self.seg, self.seg, self.batch_size)
-        self.output_shape = (3, self.batch_size)
+        if(self.learning_method == 'malis'):
+            self.input_shape = (self.batch_size+self.seg, self.batch_size+self.seg, self.batch_size+self.seg, 1)
+            self.output_shape = (self.batch_size, self.batch_size, self.batch_size, 3)
+        else:
+            self.input_shape = (self.seg, self.seg, self.seg, self.batch_size)
+            self.output_shape = (3, self.batch_size)
         
         self.log_file = self.log_folder + 'trainer.log'
         self.__clear_log()
@@ -280,7 +316,10 @@ class Trainer(object):
         self.logger.info(trainer_status+"\n")        
         
         #Load the training set into memory
-        self.__load_training_data(train_data, train_labels)
+        if (self.learning_method == 'malis') and (train_seg == None):
+            print "ERROR: Training with MALIS requires groundtruth segmentation.\n"
+            exit(0)
+        self.__load_training_data(train_data, train_labels, train_seg)
         
         #Initialize the training function
         self.__theano_training_model()
@@ -290,7 +329,7 @@ class Trainer(object):
     Load all the training samples needed for training this network. Ensure that
     there are about equal numbers of positive and negative examples.
     """
-    def __load_training_data(self, train_set, train_labels):
+    def __load_training_data(self, train_set, train_labels, train_seg=None):
           
         #Load all the training data into the GPUs memore
         if(type(train_set) == tuple):
@@ -308,29 +347,44 @@ class Trainer(object):
             self.training_labels = (theano.shared(train_labels[:,:,:,:], borrow=True) ,)
             self.data_size = (self.training_data[-1].get_value(borrow=True).shape[-1] ,)
             self.num_dsets = 1
+            
+        #If there are ground-truth segmentations to load, load them into cpu memory 
+        # (they aren't needed on the gpu)
+        if (train_seg != None) and (type(train_seg) == tuple):
+            self.segmentations = train_seg
+        elif (train_seg != None):
+            self.segmentations = (train_seg ,)
+        else:
+            print "No groundtruth segmentations provided."
+            
         
-        #List all the positions of negative labels
-        self.negatives = ()
-        self.epoch_length = 0
-        for n in range(self.num_dsets):
-            negative_samples = []
-            for i in range(0, self.data_size[n]-self.seg):
-                for j in range(0, self.data_size[n]-self.seg):
-                    for k in range(0, self.data_size[n]-self.seg):
-                        if(self.training_labels[n].get_value(borrow=True)[:,i+self.offset, j+self.offset, k+self.offset].sum() == 0):
-                            negative_samples += [[i, j, k]]
-            
-            self.negatives += (np.asarray(negative_samples, dtype='int32') ,)
-            self.epoch_length += (self.data_size[n]-self.seg)**3
-            
-        self.epoch_length = self.epoch_length/(self.log_interval*self.batch_size)
+        if(self.learning_method == 'malis'):
+            self.epoch_length = 0
+            for dsize in self.data_size:
+                self.epoch_length += (dsize - (self.batch_size+self.seg))**3
+        else:
+            #List all the positions of negative labels
+            self.negatives = ()
+            self.epoch_length = 0
+            for n in range(self.num_dsets):
+                negative_samples = []
+                for i in range(0, self.data_size[n]-self.seg):
+                    for j in range(0, self.data_size[n]-self.seg):
+                        for k in range(0, self.data_size[n]-self.seg):
+                            if(self.training_labels[n].get_value(borrow=True)[:,i+self.offset, j+self.offset, k+self.offset].sum() == 0):
+                                negative_samples += [[i, j, k]]
+                
+                self.negatives += (np.asarray(negative_samples, dtype='int32') ,)
+                self.epoch_length += (self.data_size[n]-self.seg)**3
+                
+            self.epoch_length = self.epoch_length/(self.log_interval*self.batch_size)
         
 
     """
-    Set the training examples for this batch
+    Set the training examples for this set of batches
     """
-    def __get_examples(self):
-        samples = np.zeros((3, self.batch_size*self.log_interval), dtype = 'int32')
+    def __set_batches(self):
+        samples = np.zeros((4, self.batch_size*self.log_interval), dtype = 'int32')
         for i in range(0, self.batch_size*self.log_interval):
             idx = self.rng.randint(0, self.num_dsets)
             sel = self.rng.randn(1)
@@ -341,9 +395,26 @@ class Trainer(object):
             else:           #Select a negative example from the known negatives, rather than searching for them.
                 sel = self.rng.randint(0, self.negatives[idx].shape[0], 1)[0]
                 sample = self.negatives[idx][sel]
-            samples[:,i] = sample
+            samples[:,i] = np.append(idx, sample)
         self.batch.set_value(samples, borrow=True)
-
+        
+        
+    """
+    Set an image chunk for malis training
+    """
+    def __set_chunk(self):
+        idx = self.rng.randint(0, self.num_dsets)
+        sample = self.rng.randint(0, self.data_size[idx] - (self.batch_size+self.seg), 3)
+        self.Xsub.set_value(self.training_data[idx].get_value(borrow=True)[sample[0]:sample[0]+self.batch_size+self.seg,
+                                                                           sample[1]:sample[1]+self.batch_size+self.seg,
+                                                                           sample[2]:sample[2]+self.batch_size+self.seg].dimshuffle(2,1,0,'x'), borrow=True)
+        self.Ysub.set_value(self.training_labels[idx].get_value(borrow=True)[:, sample[0]:sample[0]+self.batch_size,
+                                                                                sample[1]:sample[1]+self.batch_size,
+                                                                                sample[2]:sample[2]+self.batch_size].dimshuffle(3,2,1,0), borrow=True)
+        self.compTrue = np.tranpose(self.segmentations[idx], (2,1,0))[sample[0]:sample[0]+self.batch_size,
+                                                                      sample[1]:sample[1]+self.batch_size,
+                                                                      sample[2]:sample[2]+self.batch_size,:]
+        
         
     """
     Store the trainining and weight values at regular intervals
@@ -423,19 +494,28 @@ class Trainer(object):
             
             starttime = time.clock()
             for i in range(0, self.epoch_length):
+                    
+                if(self.learning_method == 'malis'):
+                    self.__set_chunck()
+                    prediction = self.malis_foward()
+                    dloss, randIndex, totLoss = findMalisLoss(self.compTrue, 
+                                                              self.Ysub.get_value(borrow=True),
+                                                              prediction)
+                    train_error[i] = self.malis_backward(dloss)
+                else:
+                    self.reset_counter()
+                    self.__set_batches()
+        
+                    for j in range(0, self.log_interval):
+                        self.train_model()      
                 
-                self.reset_counter()
-                self.__get_examples()
-    
-                for j in range(0, self.log_interval):
-                    self.train_model()      
-                
-                train_error[i] = np.mean(self.error.get_value(borrow=True))
+                    train_error[i] = np.mean(self.error.get_value(borrow=True))
                 
                 if(print_updates):
                     print 'Average cost over updates '+`i*self.log_interval`+' - '+`(i+1)*self.log_interval`+' ('+`self.batch_size*self.log_interval`+' examples): '+`train_error[i]`
             
                 self.__store_status(train_error[i])
+            
             epoch_time = time.clock() - starttime
             total_time += epoch_time            
             

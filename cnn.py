@@ -144,8 +144,8 @@ class CNN(object):
             self.cost = T.mean(T.nnet.binary_crossentropy(self.out, self.Y.dimshuffle(1,0,'x','x','x')), dtype=theano.config.floatX)
         else:
             self.cost = T.mean(1/2.0*((self.out - self.Y.dimshuffle(1,0,'x','x','x'))**2), dtype=theano.config.floatX)        
-        
-        
+    
+    
     """Initialize the network"""
     def __init__(self, **kwargs):
         
