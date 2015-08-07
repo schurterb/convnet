@@ -14,7 +14,6 @@ import argparse
 import theano
 from cnn import CNN
 from load_data import LoadData
-from analyzer import Analyzer
 
 
 def test_network(config_file):
@@ -39,9 +38,10 @@ def test_network(config_file):
     #------------------------------------------------------------------------------
     
     print 'Opening Data Files'
-    test_data = LoadData(directory = config.get('Testing Data', 'folders').split(',')[0], 
+    test_data = LoadData(directory = config.get('Testing Data', 'folders').split(','), 
                          data_file_name = config.get('Testing Data', 'data_file'),
-                         label_file_name = config.get('Testing Data', 'label_file'))
+                         label_file_name = config.get('Testing Data', 'label_file'),
+                         seg_file_name = config.get('Testing Data', 'seg_file'))
     #------------------------------------------------------------------------------
     init_time = time.clock() - starttime
     print "Initialization = " + `init_time` + " seconds"       
@@ -49,7 +49,7 @@ def test_network(config_file):
             
     starttime = time.clock()                 
     print 'Making Predictions'
-    network.predict(test_data.get_data()[0],
+    network.predict(test_data.get_data(),
                     results_folder = config.get('Testing', 'prediction_folder'), 
                     name = config.get('Testing', 'prediction_file'))
     testing_time = time.clock() - starttime

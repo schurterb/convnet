@@ -135,22 +135,31 @@ class Trainer(object):
     """Define the updates for MALIS training method"""
     def __malis(self):
         
-        self.grad = T.tensor4('grad')
+        self.mgrad = T.tensor4('grad')
         self.out = self.out.dimshuffle(0,4,3,2,1)
+        self.grad_counter = theano.shared(np.zeros(1, dtype='int32'), name='grad_counter') 
         
-        w_grads = T.grad(self.out[0,0,0,0,0], self.w)
-        b_grads = T.grad(self.out[0,0,0,0,0], self.b)
-                
+        flat_mgrad = self.mgrad.flatten()
+        flat_out = self.out.flatten()
+        
         w_updates = [
-            (param, param - self.lr*self.grad[0,0,0,0]*pgrad)
-            for param, pgrad in zip(self.w, w_grads)                   
+            (param, param - self.lr*flat_mgrad[self.grad_counter[0]]*T.grad(flat_out[self.grad_counter[0]], param))
+            for param in self.w
         ]
         b_updates = [
-            (param, param - self.lr*self.grad[0,0,0,0]*pgrad)
-            for param, pgrad in zip(self.b, b_grads)                   
-        ]    
-        return w_updates + b_updates
+            (param, param - self.lr*flat_mgrad[self.grad_counter[0]]*T.grad(flat_out[self.grad_counter[0]], param))
+            for param in self.b
+        ]
+        count_update = [
+            (self.grad_counter, self.grad_counter+1)
+        ]
         
+        output, malis_updates = theano.scan(lambda a, b:w_updates+b_updates+count_update, 
+                                            non_sequences=[self.X, self.mgrad], 
+                                            n_steps=3*(self.batch_size**3))
+        
+        return malis_updates
+    
     
     """Define the updates to be performed each training round"""
     def __perform_updates(self):        
@@ -166,7 +175,7 @@ class Trainer(object):
         else: #The default is standard SGD   
             self.updates = self.__standard()
             
-            
+    
     """
     Record the cost for the current batch
     """
@@ -198,7 +207,7 @@ class Trainer(object):
                                   dtype = theano.config.floatX), name='Xsub')
         self.Ysub = theano.shared(np.zeros(self.output_shape, 
                                   dtype = theano.config.floatX), name='Ysub')
-                
+               
         scan_vals = [
             (self.index, self.batch_counter - (self.update_counter*self.batch_size) ),
             (self.Xsub, T.set_subtensor(self.Xsub[:,:,:,self.index[0]], self.training_data[self.batch.get_value(borrow=True)[0, self.batch_counter.get_value(borrow=True)[0]]]
@@ -214,7 +223,7 @@ class Trainer(object):
         outputs, x_updates = theano.scan(lambda:scan_vals, n_steps=self.batch_size)
         self.updates = x_updates + self.updates 
 
-  
+    
     """
     Define the function(s) for GPU training
     """
@@ -233,12 +242,12 @@ class Trainer(object):
             self.malis_forward = theano.function(inputs = [], outputs = self.out,
                                                  givens = [(self.X, self.Xsub)],
                                                  allow_input_downcast=True)
-            self.malis_backward = theano.function(inputs = [self.grad], outputs = self.pixerr,
+            self.malis_backward = theano.function(inputs = [self.mgrad], outputs = self.pixerr,
                                                   updates = self.updates,
                                                   givens = [(self.X, self.Xsub),
                                                             (self.Y, self.Ysub)],
                                                   allow_input_downcast=True)
-            
+            self.reset_counter = theano.function(inputs=[], outputs=[], updates=[(self.grad_counter, [0])])
         else:            
             self.__load_batch()
             
@@ -248,9 +257,9 @@ class Trainer(object):
                                                          (self.Y, self.Ysub)],
                                                allow_input_downcast=True)
                                     
-            self.reset_counter = theano.function(inputs=[], outputs=[], updates=[(self.batch_counter, [0]), (self.update_counter, [0])])
+            self.reset_counter = theano.function(inputs=[], outputs=[], updates=[(self.batch_counter, [0]), (self.update_counter, [0]), (self.grad_counter, [0])])
             
-            
+        
     """
     Network must be a list constaining the key components of the network
      to be trained, namely its symbolic theano reprentation (first parameter),
@@ -380,8 +389,8 @@ class Trainer(object):
                 self.epoch_length += (self.data_size[n]-self.seg)**3
                 
             self.epoch_length = self.epoch_length/(self.log_interval*self.batch_size)
-        
-
+    
+    
     """
     Set the training examples for this set of batches
     """
@@ -416,16 +425,21 @@ class Trainer(object):
         self.compTrue = np.transpose(self.segmentations[idx], (2,1,0))[sample[0]:sample[0]+self.batch_size,
                                                                        sample[1]:sample[1]+self.batch_size,
                                                                        sample[2]:sample[2]+self.batch_size]
-        
-        
+    
+    
     """
     Store the trainining and weight values at regular intervals
     """
-    def __store_status(self, error):
+    def __store_status(self, error, ri=None):
         
         with open(self.log_folder + 'learning_curve.csv', 'ab') as lcf:
             fw = csv.writer(lcf, delimiter=',')
             fw.writerow([error])
+            
+        if(ri != None):
+            with open(self.log_folder + 'randIndex.csv', 'ab') as rif:
+                fw = csv.writer(rif, delimiter=',')
+                fw.writerow(ri)
         
         weights_folder = self.log_folder + 'weights/'
         trainer_folder = self.log_folder + 'trainer/'
@@ -446,7 +460,7 @@ class Trainer(object):
                 self.mw[i].get_value().tofile(trainer_folder + 'layer_'+`i`+'_weight_mnt.csv', sep=',')
                 self.mb[i].get_value().tofile(trainer_folder + 'layer_'+`i`+'_bias_mnt.csv', sep=',')
     
-
+    
     """Clear the logging file"""
     def __clear_log(self):
         with open(self.log_file, 'w'):
@@ -457,6 +471,8 @@ class Trainer(object):
     def __init_lc(self):
         if not os.path.isfile(self.log_folder + 'learning_curve.csv'):
             open(self.log_folder + 'learning_curve.csv', 'w').close()
+        if (self.learning_method == 'malis') and not os.path.isfile(self.log_folder + 'randIndex.csv'):
+            open(self.log_folder + 'randIndex.csv', 'w').close()
     
     
     """
@@ -496,32 +512,32 @@ class Trainer(object):
             
             starttime = time.clock()
             for i in range(0, self.epoch_length):
-                    
+                   
+                self.reset_counter()
                 if(self.learning_method == 'malis'):
                     self.__set_chunk()
                     prediction = self.malis_forward()
-                    print "malis prediction successful\n"
                     dloss, randIndex, totLoss = findMalisLoss(self.compTrue, 
                                                               self.Ysub.get_value(borrow=True).astype(dtype='f', order='F'),
                                                               prediction.reshape((self.batch_size, self.batch_size, self.batch_size, 3)).astype(dtype='f', order='F'))
-                    print "malis loss calculation successful"
-                    print "randIndex:",randIndex,"\n"
                     train_error[i] = self.malis_backward(dloss)
-                    print "malis back propogation successful"
-                    print "Current pixel error:",train_error[i]
+                    
+                    if(print_updates):
+                        print 'Malis Update ',i,'  Average pixel error:',train_error[i],'  Rand Index:',randIndex
+                        
+                    self.__store_status(train_error[train_error > 0], randIndex)
                 else:
-                    self.reset_counter()
                     self.__set_batches()
-        
+                    
                     for j in range(0, self.log_interval):
-                        self.train_model()      
-                
+                        self.train_model()
+                    
                     train_error[i] = np.mean(self.error.get_value(borrow=True))
                 
-                if(print_updates):
-                    print 'Average cost over updates '+`i*self.log_interval`+' - '+`(i+1)*self.log_interval`+' ('+`self.batch_size*self.log_interval`+' examples): '+`train_error[i]`
+                    if(print_updates):
+                        print 'Average cost over updates '+`i*self.log_interval`+' - '+`(i+1)*self.log_interval`+' ('+`self.batch_size*self.log_interval`+' examples): '+`train_error[i]`
             
-                self.__store_status(train_error[i])
+                    self.__store_status(train_error[i])
             
             epoch_time = time.clock() - starttime
             total_time += epoch_time            

@@ -211,15 +211,17 @@ class CNN(object):
             for i in range(0, out_size/chunk_size):
                 for j in range(0, out_size/chunk_size):
                     for k in range(0, out_size/chunk_size):
-                        dset[:, i*chunk_size:(i+1)*chunk_size, j*chunk_size:(j+1)*chunk_size, k*chunk_size:(k+1)*chunk_size] = np.asarray(self.predictor(xsub[i*chunk_size:(i+1)*chunk_size +self.sample_size -1,
-                                                                                                                                                              j*chunk_size:(j+1)*chunk_size +self.sample_size -1, 
-                                                                                                                                                              k*chunk_size:(k+1)*chunk_size +self.sample_size -1
-                                                                                                                                                              ].reshape((chunk_size +self.sample_size -1, 
-                                                                                                                                                                         chunk_size +self.sample_size -1, 
-                                                                                                                                                                         chunk_size +self.sample_size -1, 1))
-                                                                                                                                                         )).reshape((3, chunk_size, chunk_size, chunk_size))
+                        dset[:, i*chunk_size:(i+1)*chunk_size, 
+                                j*chunk_size:(j+1)*chunk_size,
+                                k*chunk_size:(k+1)*chunk_size] = np.asarray(self.predictor(xsub[i*chunk_size:(i+1)*chunk_size +self.sample_size -1,
+                                                                                                j*chunk_size:(j+1)*chunk_size +self.sample_size -1, 
+                                                                                                k*chunk_size:(k+1)*chunk_size +self.sample_size -1
+                                                                                                ].reshape((chunk_size +self.sample_size -1, 
+                                                                                                           chunk_size +self.sample_size -1, 
+                                                                                                           chunk_size +self.sample_size -1, 1))
+                                                                                           )).reshape((3, chunk_size, chunk_size, chunk_size))
             f.close()
-        
+    
         
         
     """
