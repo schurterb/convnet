@@ -25,29 +25,39 @@ theano.config.floatX = 'float32'
 class Trainer(object):
     
     """Define the updates for RMSprop"""
-    def __rmsprop(self):
-                
-        w_grads = T.grad(self.cost, self.w)
-        b_grads = T.grad(self.cost, self.b)
+    def __rmsprop(self, w_grads, b_grads):
         #Initialize shared variable to store MS of gradient btw updates
         self.vw = ()
         self.vb = ()
-        if(self.load_folder == None):
-            for layer in range(0, len(self.w)):
-                self.vw = self.vw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX), name='vw'+`layer`) ,)
-                self.vb = self.vb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX), name='vb'+`layer`) ,)      
+        if self.load_folder and self.malis:            
+            trainer_folder = self.load_folder + 'trainer/malis/'
+            if os.path.exists(trainer_folder):
+                for layer in range(0, len(self.w)):
+                    self.vw = self.vw + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_weight_var.csv', delimiter=',').reshape(self.net_shape[layer,:]).astype(theano.config.floatX), name='vw'+`layer`) ,)
+                    self.vb = self.vb + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_bias_var.csv', delimiter=',').reshape(self.net_shape[layer,0]).astype(theano.config.floatX), name='vb'+`layer`) ,)
+        elif self.load_folder:            
+            trainer_folder = self.load_folder + 'trainer/basic/'
+            if os.path.exists(trainer_folder):
+                for layer in range(0, len(self.w)):
+                    self.vw = self.vw + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_weight_var.csv', delimiter=',').reshape(self.net_shape[layer,:]).astype(theano.config.floatX), name='vw'+`layer`) ,)
+                    self.vb = self.vb + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_bias_var.csv', delimiter=',').reshape(self.net_shape[layer,0]).astype(theano.config.floatX), name='vb'+`layer`) ,)
         else:
             for layer in range(0, len(self.w)):
-                self.vw = self.vw + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_weight_var.csv', delimiter=',').reshape(self.net_shape[layer,:]).astype(theano.config.floatX), name='vw'+`layer`) ,)
-                self.vb = self.vb + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_bias_var.csv', delimiter=',').reshape(self.net_shape[layer,0]).astype(theano.config.floatX), name='vb'+`layer`) ,)
-                
+                    self.vw = self.vw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX), name='vw'+`layer`) ,)
+                    self.vb = self.vb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX), name='vb'+`layer`) ,)
+        
+        if(len(self.vw) == 0):
+            for layer in range(0, len(self.w)):
+                    self.vw = self.vw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX), name='vw'+`layer`) ,)
+                    self.vb = self.vb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX), name='vb'+`layer`) ,)
+        
         vw_updates = [
             (r, (self.b2*r) + (1-self.b2)*grad**2)
-            for r, grad in zip(self.vw, w_grads)                   
+            for r, grad in zip(self.vw, w_grads)         
         ]
         vb_updates = [
             (r, (self.b2*r) + (1-self.b2)*grad**2)
-            for r, grad in zip(self.vb, b_grads)                   
+            for r, grad in zip(self.vb, b_grads)               
         ]
         w_updates = [
             (param, param - self.lr*(grad/(T.sqrt(r) + self.damp)))
@@ -61,28 +71,43 @@ class Trainer(object):
         
         
     """Define the updates for ADAM"""
-    def __adam(self):
-                
-        w_grads = T.grad(self.cost, self.w)
-        b_grads = T.grad(self.cost, self.b)
+    def __adam(self, w_grads, b_grads):
         #Initialize shared variable to store the momentum and the 
             # variance terms btw updates
         self.mw = ()
         self.mb = ()
         self.vw = ()
         self.vb = ()
-        if(self.load_folder == None):
-            for layer in range(0, len(self.w)):
-                self.mw = self.mw + (theano.shared(np.zeros(self.net_shape[layer,:], dtype=theano.config.floatX), name='mw'+`layer`) ,)
-                self.mb = self.mb + (theano.shared(np.zeros(self.net_shape[layer,0], dtype=theano.config.floatX), name='mb'+`layer`) ,)
-                self.vw = self.vw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX), name='vw'+`layer`) ,)
-                self.vb = self.vb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX), name='vb'+`layer`) ,)
+        if self.load_folder and self.malis:            
+            trainer_folder = self.load_folder + 'trainer/malis/'
+            if os.path.exists(trainer_folder):
+                for layer in range(0, len(self.w)):
+                    self.mw = self.mw + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_weight_mnt.csv', delimiter=',').reshape(self.net_shape[layer,:]).astype(theano.config.floatX), name='mw'+`layer`) ,)
+                    self.mb = self.mb + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_bias_mnt.csv', delimiter=',').reshape(self.net_shape[layer,0]).astype(theano.config.floatX), name='mb'+`layer`) ,)
+                    self.vw = self.vw + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_weight_var.csv', delimiter=',').reshape(self.net_shape[layer,:]).astype(theano.config.floatX), name='vw'+`layer`) ,)
+                    self.vb = self.vb + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_bias_var.csv', delimiter=',').reshape(self.net_shape[layer,0]).astype(theano.config.floatX), name='vb'+`layer`) ,)
+        elif self.load_folder:            
+            trainer_folder = self.load_folder + 'trainer/basic/'
+            if os.path.exists(trainer_folder):
+                for layer in range(0, len(self.w)):
+                    self.mw = self.mw + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_weight_mnt.csv', delimiter=',').reshape(self.net_shape[layer,:]).astype(theano.config.floatX), name='mw'+`layer`) ,)
+                    self.mb = self.mb + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_bias_mnt.csv', delimiter=',').reshape(self.net_shape[layer,0]).astype(theano.config.floatX), name='mb'+`layer`) ,)
+                    self.vw = self.vw + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_weight_var.csv', delimiter=',').reshape(self.net_shape[layer,:]).astype(theano.config.floatX), name='vw'+`layer`) ,)
+                    self.vb = self.vb + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_bias_var.csv', delimiter=',').reshape(self.net_shape[layer,0]).astype(theano.config.floatX), name='vb'+`layer`) ,)
         else:
             for layer in range(0, len(self.w)):
-                self.mw = self.mw + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_weight_mnt.csv', delimiter=',').reshape(self.net_shape[layer,:]).astype(theano.config.floatX), name='mw'+`layer`) ,)
-                self.mb = self.mb + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_bias_mnt.csv', delimiter=',').reshape(self.net_shape[layer,0]).astype(theano.config.floatX), name='mb'+`layer`) ,)
-                self.vw = self.vw + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_weight_var.csv', delimiter=',').reshape(self.net_shape[layer,:]).astype(theano.config.floatX), name='vw'+`layer`) ,)
-                self.vb = self.vb + (theano.shared(np.genfromtxt(self.load_folder+'layer_'+`layer`+'_bias_var.csv', delimiter=',').reshape(self.net_shape[layer,0]).astype(theano.config.floatX), name='vb'+`layer`) ,)
+                    self.mw = self.mw + (theano.shared(np.zeros(self.net_shape[layer,:], dtype=theano.config.floatX), name='mw'+`layer`) ,)
+                    self.mb = self.mb + (theano.shared(np.zeros(self.net_shape[layer,0], dtype=theano.config.floatX), name='mb'+`layer`) ,)
+                    self.vw = self.vw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX), name='vw'+`layer`) ,)
+                    self.vb = self.vb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX), name='vb'+`layer`) ,)
+                    
+        if(len(self.vw) == 0):
+            for layer in range(0, len(self.w)):
+                    self.mw = self.mw + (theano.shared(np.zeros(self.net_shape[layer,:], dtype=theano.config.floatX), name='mw'+`layer`) ,)
+                    self.mb = self.mb + (theano.shared(np.zeros(self.net_shape[layer,0], dtype=theano.config.floatX), name='mb'+`layer`) ,)
+                    self.vw = self.vw + (theano.shared(np.ones(self.net_shape[layer,:], dtype=theano.config.floatX), name='vw'+`layer`) ,)
+                    self.vb = self.vb + (theano.shared(np.ones(self.net_shape[layer,0], dtype=theano.config.floatX), name='vb'+`layer`) ,)
+
         self.t = theano.shared(np.asarray(1, dtype=theano.config.floatX))
         
         mw_updates = [
@@ -116,10 +141,7 @@ class Trainer(object):
         
         
     """Define the updates for standard SGD"""
-    def __standard(self):
-
-        w_grads = T.grad(self.cost, self.w)
-        b_grads = T.grad(self.cost, self.b)        
+    def __standard(self, w_grads, b_grads):     
         
         w_updates = [
             (param, param - self.lr*grad)
@@ -133,54 +155,73 @@ class Trainer(object):
         
         
     """Define the updates for MALIS training method"""
-    def __malis(self):
+    def __malis_grad(self):
         
         self.mgrad = T.tensor4('grad')
         self.out = self.out.dimshuffle(0,4,3,2,1)
-        self.grad_counter = theano.shared(np.zeros(1, dtype='int32'), name='grad_counter') 
+        self.grad_counter = theano.shared(np.zeros(1, dtype='int32'), name='grad_counter')
+        w_grad = ()
+        b_grad = ()
+        for pw, pb in zip(self.w, self.b):
+            w_grad += (theano.shared(np.zeros(pw.get_value(borrow=True).shape, dtype=theano.config.floatX)) ,)
+            b_grad += (theano.shared(np.zeros(pb.get_value(borrow=True).shape, dtype=theano.config.floatX)) ,)
         
         flat_mgrad = self.mgrad.flatten()
         flat_out = self.out.flatten()
         
-        w_updates = [
-            (param, param - self.lr*flat_mgrad[self.grad_counter[0]]*T.grad(flat_out[self.grad_counter[0]], param))
-            for param in self.w
+        
+        wgrad_updates = [
+            (grad, flat_mgrad[self.grad_counter[0]]*T.grad(flat_out[self.grad_counter[0]], param))
+            for grad, param in zip(w_grad, self.w)
         ]
-        b_updates = [
-            (param, param - self.lr*flat_mgrad[self.grad_counter[0]]*T.grad(flat_out[self.grad_counter[0]], param))
-            for param in self.b
+        bgrad_updates = [
+            (grad, flat_mgrad[self.grad_counter[0]]*T.grad(flat_out[self.grad_counter[0]], param))
+            for grad, param in zip(b_grad, self.b)
         ]
+        
+        
+        if(self.learning_method == 'RMSprop'):
+            param_updates = self.__rmsprop(w_grad, b_grad)            
+        elif(self.learning_method == 'ADAM'):
+            param_updates = self.__adam(w_grad, b_grad)            
+        else: #The default is standard SGD   
+            param_updates = self.__standard(w_grad, b_grad)
+            
         count_update = [
             (self.grad_counter, self.grad_counter+1)
         ]
         
-        output, malis_updates = theano.scan(lambda a, b:w_updates+b_updates+count_update, 
+        output, malis_updates = theano.scan(lambda a, b:wgrad_updates+bgrad_updates+param_updates+count_update, 
                                             non_sequences=[self.X, self.mgrad], 
-                                            n_steps=3*(self.batch_size**3))
+                                            n_steps=3*(self.chunk_size**3))
         
         return malis_updates
     
     
     """Define the updates to be performed each training round"""
-    def __perform_updates(self):        
-        if(self.learning_method == 'RMSprop'):
-            self.updates = self.__rmsprop()
-            
-        elif(self.learning_method == 'ADAM'):
-            self.updates = self.__adam()
-            
-        elif(self.learning_method == 'malis'):
-            self.updates = self.__malis()
-            
-        else: #The default is standard SGD   
-            self.updates = self.__standard()
+    def __perform_updates(self):  
+
+        if self.malis:
+            self.updates = self.__malis_grad()
+        else:
+            w_grad = T.grad(self.cost, self.w)
+            b_grad = T.grad(self.cost, self.b)
+        
+            if(self.learning_method == 'RMSprop'):
+                self.updates = self.__rmsprop(w_grad, b_grad)
+                
+            elif(self.learning_method == 'ADAM'):
+                self.updates = self.__adam(w_grad, b_grad)
+                
+            else: #The default is standard SGD   
+                self.updates = self.__standard(w_grad, b_grad)
             
     
     """
     Record the cost for the current batch
     """
     def __set_log(self):
-        if(self.learning_method == 'malis'):
+        if self.malis:
             self.Y = T.tensor4('Y')
             self.pixerr = T.mean(1/2.0*((self.out - self.Y.dimshuffle('x',0,1,2,3))**2), dtype=theano.config.floatX) 
             
@@ -233,7 +274,7 @@ class Trainer(object):
             
         self.__set_log()
         
-        if(self.learning_method == 'malis'):  
+        if self.malis:  
             self.Xsub = theano.shared(np.zeros(self.input_shape,
                                                dtype = theano.config.floatX), name='Xsub')
             self.Ysub = theano.shared(np.zeros(self.output_shape, 
@@ -257,7 +298,7 @@ class Trainer(object):
                                                          (self.Y, self.Ysub)],
                                                allow_input_downcast=True)
                                     
-            self.reset_counter = theano.function(inputs=[], outputs=[], updates=[(self.batch_counter, [0]), (self.update_counter, [0]), (self.grad_counter, [0])])
+            self.reset_counter = theano.function(inputs=[], outputs=[], updates=[(self.batch_counter, [0]), (self.update_counter, [0])])
             
         
     """
@@ -287,7 +328,12 @@ class Trainer(object):
         
         #Training parameters
         trainer_status += "Trainer Parameters\n"
-        trainer_status += "cost function = "+ `network.cost_func` +"\n"
+        self.malis = kwargs.get('use_malis', False)
+        if self.malis:
+            trainer_status += "cost function = Rand Index\n"
+        else:
+            trainer_status += "cost function = "+ `network.cost_func` +"\n"
+            
         self.learning_method = kwargs.get('learning_method', 'standardSGD')
         trainer_status += "learning method = "+self.learning_method+"\n"
         self.batch_size = kwargs.get('batch_size', 100)
@@ -310,10 +356,12 @@ class Trainer(object):
         
         self.seg = int(self.net_shape.shape[0]*(self.net_shape[0,1] -1) +1)
         self.offset = (self.seg -1)/2    
-        if(self.learning_method == 'malis'):
-            self.input_shape = (self.batch_size+self.seg, self.batch_size+self.seg, self.batch_size+self.seg, 1)
-            self.output_shape = (self.batch_size, self.batch_size, self.batch_size, 3)
+        if self.malis:
+            self.chunk_size = int(round((self.batch_size*self.log_interval)**(1.0/3.0)))
+            self.input_shape = (self.chunk_size+self.seg, self.chunk_size+self.seg, self.chunk_size+self.seg, 1)
+            self.output_shape = (self.chunk_size, self.chunk_size, self.chunk_size, 3)
         else:
+            self.chunk_size = self.seg
             self.input_shape = (self.seg, self.seg, self.seg, self.batch_size)
             self.output_shape = (3, self.batch_size)
         
@@ -325,7 +373,7 @@ class Trainer(object):
         self.logger.info(trainer_status+"\n")        
         
         #Load the training set into memory
-        if (self.learning_method == 'malis') and (train_seg == None):
+        if self.malis and not train_seg:
             print "ERROR: Training with MALIS requires groundtruth segmentation.\n"
             exit(0)
         self.__load_training_data(train_data, train_labels, train_seg)
@@ -359,7 +407,7 @@ class Trainer(object):
             
         #If there are ground-truth segmentations to load, load them into cpu memory 
         # (they aren't needed on the gpu)
-        if (train_seg != None) and (type(train_seg) == tuple):
+        if train_seg and (type(train_seg) == tuple):
             self.segmentations = ()
             for seg in train_seg:
                 self.segmentations = (np.asarray(seg, dtype=np.intc, order='F') ,)
@@ -372,7 +420,7 @@ class Trainer(object):
         if(self.learning_method == 'malis'):
             self.epoch_length = 0
             for dsize in self.data_size:
-                self.epoch_length += (dsize - (self.batch_size+self.seg))**3
+                self.epoch_length += (dsize - self.chunk_size)**3
         else:
             #List all the positions of negative labels
             self.negatives = ()
@@ -415,38 +463,42 @@ class Trainer(object):
     """
     def __set_chunk(self):
         idx = self.rng.randint(0, self.num_dsets)
-        sample = self.rng.randint(0, self.data_size[idx] - (self.batch_size+self.seg), 3)
-        self.Xsub.set_value(self.training_data[idx].get_value(borrow=True)[sample[0]:sample[0]+self.batch_size+(self.seg-1),
-                                                                           sample[1]:sample[1]+self.batch_size+(self.seg-1),
-                                                                           sample[2]:sample[2]+self.batch_size+(self.seg-1)].reshape((self.batch_size+(self.seg-1),self.batch_size+(self.seg-1),self.batch_size+(self.seg-1),1)), borrow=True)
-        self.Ysub.set_value(np.transpose(self.training_labels[idx].get_value(borrow=True)[:, sample[0]:sample[0]+self.batch_size,
-                                                                                sample[1]:sample[1]+self.batch_size,
-                                                                                sample[2]:sample[2]+self.batch_size]), borrow=True)
-        self.compTrue = np.transpose(self.segmentations[idx], (2,1,0))[sample[0]:sample[0]+self.batch_size,
-                                                                       sample[1]:sample[1]+self.batch_size,
-                                                                       sample[2]:sample[2]+self.batch_size]
+        sample = self.rng.randint(0, self.data_size[idx] - (self.chunk_size+(self.seg-1)), 3)
+        self.Xsub.set_value(self.training_data[idx].get_value(borrow=True)[sample[0]:sample[0]+self.chunk_size+(self.seg-1),
+                                                                           sample[1]:sample[1]+self.chunk_size+(self.seg-1),
+                                                                           sample[2]:sample[2]+self.chunk_size+(self.seg-1)].reshape((self.chunk_size+(self.seg-1),self.chunk_size+(self.seg-1),self.chunk_size+(self.seg-1),1)), borrow=True)
+        self.Ysub.set_value(np.transpose(self.training_labels[idx].get_value(borrow=True)[:, self.offset+sample[0]:self.offset+sample[0]+self.chunk_size,
+                                                                                             self.offset+sample[1]:self.offset+sample[1]+self.chunk_size,
+                                                                                             self.offset+sample[2]:self.offset+sample[2]+self.chunk_size]), borrow=True)
+        self.compTrue = np.transpose(self.segmentations[idx], (2,1,0))[self.offset+sample[0]:self.offset+sample[0]+self.chunk_size,
+                                                                       self.offset+sample[1]:self.offset+sample[1]+self.chunk_size,
+                                                                       self.offset+sample[2]:self.offset+sample[2]+self.chunk_size]
     
     
     """
     Store the trainining and weight values at regular intervals
     """
-    def __store_status(self, error, ri=None):
+    def __store_status(self, error, error_type='MSE'):
         
-        with open(self.log_folder + 'learning_curve.csv', 'ab') as lcf:
-            fw = csv.writer(lcf, delimiter=',')
+                   
+        if(error_type == 'rand'):
+            error_file = 'randIndex.csv'
+        else:
+            error_file = 'learning_curve.csv'
+        with open(self.log_folder + error_file, 'ab') as ef:
+            fw = csv.writer(ef, delimiter=',')
             fw.writerow([error])
-            
-        if(ri != None):
-            with open(self.log_folder + 'randIndex.csv', 'ab') as rif:
-                fw = csv.writer(rif, delimiter=',')
-                fw.writerow(ri)
         
         weights_folder = self.log_folder + 'weights/'
-        trainer_folder = self.log_folder + 'trainer/'
+        if self.malis:
+            trainer_folder = self.log_folder + 'trainer/malis/'
+        else:
+            trainer_folder = self.log_folder + 'trainer/basic/'
+        
         if not os.path.exists(weights_folder):
             os.mkdir(weights_folder)
         if not os.path.exists(trainer_folder):
-            os.mkdir(trainer_folder)
+            os.makedirs(trainer_folder)
         
         for i in range(0, self.net_shape.shape[0]):
             self.w[i].get_value().tofile(weights_folder + 'layer_'+`i`+'_weights.csv', sep=',')
@@ -471,7 +523,7 @@ class Trainer(object):
     def __init_lc(self):
         if not os.path.isfile(self.log_folder + 'learning_curve.csv'):
             open(self.log_folder + 'learning_curve.csv', 'w').close()
-        if (self.learning_method == 'malis') and not os.path.isfile(self.log_folder + 'randIndex.csv'):
+        if self.malis and not os.path.isfile(self.log_folder + 'randIndex.csv'):
             open(self.log_folder + 'randIndex.csv', 'w').close()
     
     
@@ -507,6 +559,13 @@ class Trainer(object):
         epoch_time = 0
         total_time = 0        
         
+        #Testing
+        self.epoch_length = 20
+        pred_time = 0
+        malis_time = 0
+        train_time = 0        
+        res = []
+        
         epoch = 0
         while(epoch < duration):
             
@@ -514,18 +573,28 @@ class Trainer(object):
             for i in range(0, self.epoch_length):
                    
                 self.reset_counter()
-                if(self.learning_method == 'malis'):
+                if self.malis:
                     self.__set_chunk()
+                    
+                    checktime = time.clock()
                     prediction = self.malis_forward()
+                    pred_time += time.clock() - checktime
+                    
+                    checktime = time.clock()
                     dloss, randIndex, totLoss = findMalisLoss(self.compTrue, 
                                                               self.Ysub.get_value(borrow=True).astype(dtype='f', order='F'),
-                                                              prediction.reshape((self.batch_size, self.batch_size, self.batch_size, 3)).astype(dtype='f', order='F'))
+                                                              prediction.reshape((self.chunk_size, self.chunk_size, self.chunk_size, 3)).astype(dtype='f', order='F'))
+                    malis_time += time.clock() - checktime
+                                                              
+                    checktime = time.clock()
                     train_error[i] = self.malis_backward(dloss)
+                    train_time += time.clock() - checktime
                     
+                    res.append((self.Xsub.get_value(borrow=True), self.Ysub.get_value(borrow=True),  prediction.reshape((self.chunk_size, self.chunk_size, self.chunk_size, 3)), dloss))
                     if(print_updates):
-                        print 'Malis Update ',i,'  Average pixel error:',train_error[i],'  Rand Index:',randIndex
+                        print 'Rand Index for MALIS update',i,'(',(self.chunk_size**3),'examples):',randIndex
                         
-                    self.__store_status(train_error[train_error > 0], randIndex)
+                    self.__store_status(randIndex, )
                 else:
                     self.__set_batches()
                     
@@ -549,5 +618,5 @@ class Trainer(object):
             
             epoch += 1
             
-        return train_error
+        return train_error, pred_time, malis_time, train_time, res
             

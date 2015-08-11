@@ -70,3 +70,45 @@ def display(raw, label, pred, im_size, depthInit=1):
     plt.show()
 
 #display(data_set, label_set, label_set, 250)
+
+#Displays three images: the raw data, the corresponding labels, and the predictions
+def malisScan(raw, label, pred, loss, depthInit=1):
+    #raw = raw[-1::,-1::,-1::,:]
+    im_size = pred.shape[0]
+    crop = (raw.shape[0]-im_size)/2
+    #fig = plt.figure(figsize=(20,10))
+    fig = plt.figure()
+    fig.set_facecolor('white')
+    ax0,ax1,ax2,ax3 = fig.add_subplot(1,4,1),fig.add_subplot(1,4,2),fig.add_subplot(1,4,3),fig.add_subplot(1,4,4)
+
+    fig.subplots_adjust(left=0.2, bottom=0.25)
+    depth0 = 0
+
+    #Image is grayscale
+    im0 = ax0.imshow(np.transpose(raw[crop:-crop,crop:-crop,crop+depthInit,0]),cmap=cm.Greys_r)
+    ax1.set_title('Raw Image')
+
+    im1 = ax1.imshow(label[depthInit,:,:,:])
+    ax1.set_title('Target Affinity')
+
+    im2 = ax2.imshow(pred[depthInit,:,:,:])
+    ax2.set_title('Predicted Affinity')
+
+    im3 = ax3.imshow(loss[depthInit,:,:,:])
+    ax3.set_title('Malis Loss')
+    
+    axdepth = fig.add_axes([0.25, 0.3, 0.65, 0.03], axisbg='white')
+    #axzoom  = fig.add_axes([0.25, 0.15, 0.65, 0.03], axisbg=axcolor)
+
+    depth = Slider(axdepth, 'Min', 0, im_size, valinit=depth0,valfmt='%0.0f')
+    #zoom = Slider(axmax, 'Max', 0, 250, valinit=max0)
+    
+    def update(val):
+        z = int(depth.val)
+        im0.set_data(np.transpose(raw[crop:-crop,crop:-crop,crop+z,0]))
+        im1.set_data(label[z,:,:,:])
+        im2.set_data(pred[z,:,:,:])
+        im3.set_data(loss[z,:,:,:])
+        fig.canvas.draw()
+    depth.on_changed(update)
+    plt.show()

@@ -11,42 +11,38 @@ import time
 import ConfigParser
 import argparse
 
-import theano
-from cnn import CNN
-from load_data import LoadData
+import matlab.engine
 
 
-def test_prediction(prediction_folder):
+def test_prediction(config_file):
     
     #Open configuration file for this network
     config = ConfigParser.ConfigParser()
-    config.read(prediction_folder)
+    config.read(config_file)
     
-    #Set the device on which to perform these computations
-    device = config.get('General', 'device')
-    theano.sandbox.cuda.use(device)
-    if (device != 'cpu'):
-        theano.config.nvcc.flags='-use=fast=math'
-        theano.config.allow_gc=False
-    #------------------------------------------------------------------------------
+    test_data_folder = config.get('Testing Data', 'folders').split(',');
+    label_file = config.get('Testing Data', 'label_file');
+
+    results_folder = config.get('Testing', 'prediction_folder');
+    pred_file = config.get('Testing', 'prediction_file')+'_0.h5';
     
-    print 'Opening Data Files'
-    test_data = LoadData(directory = config.get('Testing Data', 'folders').split(','), 
-                         data_file_name = config.get('Testing Data', 'data_file'),
-                         label_file_name = config.get('Testing Data', 'label_file'),
-                         seg_file_name = config.get('Testing Data', 'seg_file'))
+    print "Starting Matlab"
+    eng = matlab.engine.start_matlab()
+    print "Evaluating Predictions"
+    eng.evaluate_predictions(test_data_folder[0]+label_file, results_folder+pred_file, results_folder, "Testing "+results_folder.split('/')[-1]+" predictions")
+    print "Evaluation Complete"
 
     
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", help="path to folder containing predictions. Default is current directory.")
+    parser.add_argument("-c", help="path to .ini file for network. default is network.ini")
     
     args = parser.parse_args()
     if args.f:
-        prediction_folder = args.f
+        config_file = args.f
     else:
-        prediction_foler = ""
+        config_file = "network.ini"
         
     test_prediction(prediction_folder)
     

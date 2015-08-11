@@ -29,7 +29,7 @@ seg_file = 'groundtruth_seg.h5'
 #res_files = ('ADAM', 'ADAM_1', 'ADAM_2')#, 'ADAM_3')
 #res_files = ('rmsp_1', 'rmsp_2')#, 'rmsp_3')
 #res_files = ("results/deep_nets_1/ADAM", "results/learn_opt_res1/name='RMSprop'_lr=0.0001_b1=0.9_b2=0_dp=1e-08", "results/deep_nets_2/rmsp_1")
-res_files = ('conv-5.6.5', 'conv-5.30.5', 'backups2/conv-10.20.5', 'conv-8.25.5')
+res_files = ('conv-5.6.5', 'conv-5.30.5', 'conv-10.20.5', 'conv-8.25.5')
 #------------------------------------------------------------------------------ 
 
 #Load the data for testing

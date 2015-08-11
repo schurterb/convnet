@@ -43,21 +43,22 @@ def train_network(config_file):
     #Create the network and trainer    
     if config.getboolean('Network', 'load_weights'):
         print 'Initializing Network'
-        network = CNN(weights_folder = config.get('Network', 'weights_folder'),
+        network = CNN(weights_folder = config.get('General', 'directory')+config.get('Network', 'weights_folder'),
                       activation = config.get('Network', 'activation'),
                       cost_func = config.get('Network', 'cost_func'))
          
         print 'Initializing Trainer'             
         network_trainer = Trainer(network, training_data.get_data(), training_data.get_labels(), training_data.get_segments(),
-                              batch_size = config.getint('Training', 'batch_size'),
-                              learning_method = config.get('Training', 'learning_method'),
-                              learning_rate = config.getfloat('Training', 'learning_rate'), 
-                              beta1 = config.getfloat('Training', 'beta1'),
-                              beta2 = config.getfloat('Training', 'beta2'), 
-                              damping = config.getfloat('Training', 'damping'), 
-                              trainer_folder = config.get('Training', 'trainer_folder'),
-                              log_interval = config.getint('Logging', 'log_interval'),
-                              log_folder = config.get('Logging', 'log_folder'))
+                                  use_malis = config.getboolean('Training', 'use_malis'),
+                                  batch_size = config.getint('Training', 'batch_size'),
+                                  learning_method = config.get('Training', 'learning_method'),
+                                  learning_rate = config.getfloat('Training', 'learning_rate'), 
+                                  beta1 = config.getfloat('Training', 'beta1'),
+                                  beta2 = config.getfloat('Training', 'beta2'), 
+                                  damping = config.getfloat('Training', 'damping'), 
+                                  trainer_folder = config.get('General', 'directory')+config.get('Training', 'trainer_folder'),
+                                  log_interval = config.getint('Training', 'log_interval'),
+                                  log_folder = config.get('General', 'directory')+config.get('Training', 'log_folder'))
     else:
         print 'Initializing Network'
         network = CNN(num_layers = config.getint('Network', 'num_layers'), 
@@ -67,15 +68,16 @@ def train_network(config_file):
                       cost_func = config.get('Network', 'cost_func'))
                       
         print 'Initializing Trainer'             
-        network_trainer = Trainer(network, training_data.get_data(), training_data.get_labels(), 
-                              batch_size = config.getint('Training', 'batch_size'),
-                              learning_method = config.get('Training', 'learning_method'),
-                              learning_rate = config.getfloat('Training', 'learning_rate'), 
-                              beta1 = config.getfloat('Training', 'beta1'),
-                              beta2 = config.getfloat('Training', 'beta2'), 
-                              damping = config.getfloat('Training', 'damping'), 
-                              log_interval = config.getint('Logging', 'log_interval'),
-                              log_folder = config.get('Logging', 'log_folder'))
+        network_trainer = Trainer(network, training_data.get_data(), training_data.get_labels(), training_data.get_segments(),
+                                  use_malis = config.getboolean('Training', 'use_malis'),
+                                  batch_size = config.getint('Training', 'batch_size'),
+                                  learning_method = config.get('Training', 'learning_method'),
+                                  learning_rate = config.getfloat('Training', 'learning_rate'), 
+                                  beta1 = config.getfloat('Training', 'beta1'),
+                                  beta2 = config.getfloat('Training', 'beta2'), 
+                                  damping = config.getfloat('Training', 'damping'), 
+                                  log_interval = config.getint('Training', 'log_interval'),
+                                  log_folder = config.get('General', 'directory')+config.get('Training', 'log_folder'))
                               
     init_time = time.clock() - starttime    
     #------------------------------------------------------------------------------
@@ -84,9 +86,9 @@ def train_network(config_file):
     starttime = time.clock()
     #Train the network
     print 'Training...\n'
-    train_error= network_trainer.train(config.getint('Training', 'num_epochs'), 
-                                       config.getboolean('Training', 'early_stop'), 
-                                       config.getboolean('Logging', 'print_updates'))
+    train_error = network_trainer.train(config.getint('Training', 'num_epochs'), 
+                                        config.getboolean('Training', 'early_stop'), 
+                                        config.getboolean('Training', 'print_updates'))
     total_time = time.clock() - starttime     
     #------------------------------------------------------------------------------   
     print "Total Time     = " + `total_time` + " seconds"                            
@@ -97,13 +99,17 @@ def train_network(config_file):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", help="path to .ini file for network. default is network.ini")
+    parser.add_argument("-c", help="path to network config file. default is current directory")
+    parser.add_argument("-n", help="name of network folder in networks directory. overrides -c flag")
     
     args = parser.parse_args()
     if args.c:
-        config_file = args.c
+        config_file = args.c + "network.cfg"
     else:
-        config_file = "network.ini"
+        config_file = "network.cfg"
+    
+    if args.n:
+        config_file = "networks/" + args.n + "/network.cfg"
         
     train_network(config_file)
     
