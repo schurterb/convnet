@@ -28,9 +28,9 @@ filter_size = 5
 ```
 
 Current options for activation functions include
-    relu for Rectified Linear Units
-    tanh for Hyperbolic Tangent
-    sig for Sigmoid
+    * relu for Rectified Linear Units
+    * tanh for Hyperbolic Tangent
+    * sig for Sigmoid
 
 Current options for cost functions include MSE and binary crossentropy.
 
@@ -45,25 +45,29 @@ Parameters defining the training regiment for the network are listed under the
 
 ```
 [Training]
-trainer_folder = results/test/trainer/
-learning_method = malis
-learning_rate = 0.0001
+use_malis = True
+learning_method = RMSprop
+learning_rate = 1e-05
 beta1 = 0.9
 beta2 = 0.9
 damping = 1.0e-8
-batch_size = 50
-num_epochs = 1
+batch_size = 100
+num_epochs = 10
 early_stop = False
+trainer_folder = trainer/
+log_folder =  
+log_interval = 100
+print_updates = True
 ```
 
 Current options for learning methods include
-    standardSGD with a constant learning rate (default)
-    RMSprop - beta2 is the decay factor
-    ADAM - beta2 is the decay for the variance term (as with RMSprop)
-	   beta1 is the decay for the momentum term
-    malis - see this [paper](http://papers.nips.cc/paper/3887-maximin-affinity-learning-of-image-segmentation)
+    * standardSGD with a constant learning rate (default)
+    * RMSprop - beta2 is the decay factor
+    * ADAM - beta2 is the decay for the variance term (as with RMSprop)
+	     beta1 is the decay for the momentum term
+    * malis - see this [paper](http://papers.nips.cc/paper/3887-maximin-affinity-learning-of-image-segmentation)
 
-Epoch size is defined to be approximately the entire training set and is, thus, not configurable.
+Epoch size is defined to be approximately the entire training set and is, thus, not directly configurable.
 
 Setting the early_stop flag allows the trainer to automatically stop when the cost stops decreasing.
 (Note, this does not work for malis.)
@@ -71,15 +75,35 @@ Setting the early_stop flag allows the trainer to automatically stop when the co
 If a trainer folder (created by a previous training period) is available, 
 the training can be restarted without any discontinuity. 
 
+A network from the networks folder, such as conv-8.25.5 can be trained directly by calling:
+```
+python train_network.py -n conv-8.25.5
+```
 
+A network can also be defined in any properly formated config file and trained using the -c flag:
 ```
-python train_network.py -c path/to/network.ini
+python train_network.py -c /path/to/mynetwork.cfg
 ```
+-------------------------------------------------------------------------------
+### Using MALIS
+MALIS training can be activated simply by setting the use_malis flag, but is 
+substantially slower as the malisLoss calculation is not performed on the GPU. 
+As such, it should only be used to perfect networks that cannot be further
+improved using the Mean Square Error or Binary Cross-Entropy loss functions.
 
-Similarly, predictions can be made on the test set by calling
+MALIS training is done with one contiguous block of training data at a time, 
+which is assigned at the CPU level. Thus, multiple files of training data can
+be used with MALIS training, which cannot currently be done with normal training.
 
-```
-python test_network.py --c path/to/network.ini
-```
+Currently, block size is determined based on the batch_size and log_interval
+settings, which determine how many examples are viewed before the network status
+is reported and stored. This is done to keep reporting intervals relatively 
+consistent between MALIS and nonMALIS training.
 
 -------------------------------------------------------------------------------
+## Making Predictions
+
+
+
+-------------------------------------------------------------------------------
+## Testing Predictions

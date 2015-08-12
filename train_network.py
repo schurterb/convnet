@@ -104,7 +104,7 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     if args.c:
-        config_file = args.c + "network.cfg"
+        config_file = args.c
     else:
         config_file = "network.cfg"
     
