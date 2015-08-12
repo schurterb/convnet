@@ -358,7 +358,7 @@ class Trainer(object):
         self.offset = (self.seg -1)/2    
         if self.malis:
             self.chunk_size = int(round((self.batch_size*self.log_interval)**(1.0/3.0)))
-            self.input_shape = (self.chunk_size+self.seg, self.chunk_size+self.seg, self.chunk_size+self.seg, 1)
+            self.input_shape = (self.chunk_size+(self.seg-1), self.chunk_size+(self.seg-1), self.chunk_size+(self.seg-1), 1)
             self.output_shape = (self.chunk_size, self.chunk_size, self.chunk_size, 3)
         else:
             self.chunk_size = self.seg
@@ -410,8 +410,8 @@ class Trainer(object):
         if train_seg and (type(train_seg) == tuple):
             self.segmentations = ()
             for seg in train_seg:
-                self.segmentations = (np.asarray(seg, dtype=np.intc, order='F') ,)
-        elif (train_seg != None):
+                self.segmentations += (np.asarray(seg, dtype=np.intc, order='F') ,)
+        elif train_seg:
             self.segmentations = (np.asarray(train_seg, dtype=np.intc, order='F') ,)
         else:
             print "No groundtruth segmentations provided."
@@ -444,8 +444,8 @@ class Trainer(object):
     """
     def __set_batches(self):
         samples = np.zeros((4, self.batch_size*self.log_interval), dtype = 'int32')
+        idx = self.rng.randint(0, self.num_dsets)
         for i in range(0, self.batch_size*self.log_interval):
-            idx = self.rng.randint(0, self.num_dsets)
             sel = self.rng.randn(1)
             if (sel > 0):   #Search for a positive example. They are common.
                 sample = self.rng.randint(0, self.data_size[idx] - self.seg, 3)
@@ -470,9 +470,9 @@ class Trainer(object):
         self.Ysub.set_value(np.transpose(self.training_labels[idx].get_value(borrow=True)[:, self.offset+sample[0]:self.offset+sample[0]+self.chunk_size,
                                                                                              self.offset+sample[1]:self.offset+sample[1]+self.chunk_size,
                                                                                              self.offset+sample[2]:self.offset+sample[2]+self.chunk_size]), borrow=True)
-        self.compTrue = np.transpose(self.segmentations[idx], (2,1,0))[self.offset+sample[0]:self.offset+sample[0]+self.chunk_size,
-                                                                       self.offset+sample[1]:self.offset+sample[1]+self.chunk_size,
-                                                                       self.offset+sample[2]:self.offset+sample[2]+self.chunk_size]
+        self.compTrue = np.transpose(self.segmentations[idx][self.offset+sample[0]:self.offset+sample[0]+self.chunk_size,
+                                                             self.offset+sample[1]:self.offset+sample[1]+self.chunk_size,
+                                                             self.offset+sample[2]:self.offset+sample[2]+self.chunk_size], (2,1,0))
     
     
     """
@@ -560,7 +560,7 @@ class Trainer(object):
         total_time = 0        
         
         #Testing
-        self.epoch_length = 20
+        #self.epoch_length = 5
         pred_time = 0
         malis_time = 0
         train_time = 0        
@@ -568,7 +568,7 @@ class Trainer(object):
         
         epoch = 0
         while(epoch < duration):
-            
+            if(print_updates): print 'Epoch:',epoch
             starttime = time.clock()
             for i in range(0, self.epoch_length):
                    
@@ -590,9 +590,9 @@ class Trainer(object):
                     train_error[i] = self.malis_backward(dloss)
                     train_time += time.clock() - checktime
                     
-                    res.append((self.Xsub.get_value(borrow=True), self.Ysub.get_value(borrow=True),  prediction.reshape((self.chunk_size, self.chunk_size, self.chunk_size, 3)), dloss))
+#                    res.append((self.Xsub.get_value(borrow=True), self.Ysub.get_value(borrow=True),  prediction.reshape((self.chunk_size, self.chunk_size, self.chunk_size, 3)), dloss))
                     if(print_updates):
-                        print 'Rand Index for MALIS update',i,'(',(self.chunk_size**3),'examples):',randIndex
+                        print 'Rand Index for malis update',i,'(',(self.chunk_size**3),'examples):',randIndex
                         
                     self.__store_status(randIndex, )
                 else:
