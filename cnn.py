@@ -7,6 +7,7 @@ Created on Wed Jun 24 06:35:06 2015
 Definition for creation of convolutional neural network
 """
 import sys
+import os
 
 import theano
 import theano.sandbox.cuda
@@ -201,6 +202,9 @@ class CNN(object):
     TODO: Test this...
     """
     def predict(self, x, results_folder = '', name = 'prediction', chunk_size = 10):
+        
+        if not os.path.exists(results_folder):
+            os.mkdir(results_folder)
         
         for i in range(len(x)):
             xsub = x[i]

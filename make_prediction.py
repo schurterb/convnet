@@ -32,7 +32,7 @@ def make_prediction(config_file):
 
     starttime=time.clock()
     print '\nInitializing Network'
-    network = CNN(weights_folder = config.get('Network', 'weights_folder'),
+    network = CNN(weights_folder = config.get('General', 'directory')+config.get('Network', 'weights_folder'),
                   activation = config.get('Network', 'activation'),
                   cost_func = config.get('Network', 'cost_func'))
     #------------------------------------------------------------------------------
@@ -50,7 +50,7 @@ def make_prediction(config_file):
     starttime = time.clock()                 
     print 'Making Predictions'
     network.predict(test_data.get_data(),
-                    results_folder = config.get('Testing', 'prediction_folder'), 
+                    results_folder = config.get('General', 'directory')+config.get('Testing', 'prediction_folder'), 
                     name = config.get('Testing', 'prediction_file'))
     testing_time = time.clock() - starttime
     #------------------------------------------------------------------------------
@@ -77,13 +77,17 @@ def make_prediction(config_file):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", help="path to .ini file for network. default is network.ini")
+    parser.add_argument("-c", help="path to network config file. default is current directory")
+    parser.add_argument("-n", help="name of network folder in networks directory. overrides -c flag")
     
     args = parser.parse_args()
     if args.c:
         config_file = args.c
     else:
-        config_file = "network.ini"
+        config_file = "network.cfg"
+    
+    if args.n:
+        config_file = "networks/" + args.n + "/network.cfg"
         
     make_prediction(config_file)
     

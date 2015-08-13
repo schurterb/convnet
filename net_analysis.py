@@ -14,13 +14,10 @@ from analyzer import Analyzer
 from load_data import LoadData
 
 
-results_folder = 'results/deep_nets_3/'
+results_folder = 'networks/'
 #results_folder = ''
 
-
-
-train_data_folder = 'nobackup/turaga/data/fibsem_medulla_7col/trvol-250-1-h5/'
-test_data_folder = 'nobackup/turaga/data/fibsem_medulla_7col/tstvol-520-1-h5/'
+test_data_folder = 'nobackup/turaga/data/fibsem_medulla_7col/tstvol-520-2-h5/'
 data_file = 'img_normalized.h5'
 label_file = 'groundtruth_aff.h5'
 seg_file = 'groundtruth_seg.h5'
@@ -29,7 +26,7 @@ seg_file = 'groundtruth_seg.h5'
 #res_files = ('ADAM', 'ADAM_1', 'ADAM_2')#, 'ADAM_3')
 #res_files = ('rmsp_1', 'rmsp_2')#, 'rmsp_3')
 #res_files = ("results/deep_nets_1/ADAM", "results/learn_opt_res1/name='RMSprop'_lr=0.0001_b1=0.9_b2=0_dp=1e-08", "results/deep_nets_2/rmsp_1")
-res_files = ('conv-5.6.5', 'conv-5.30.5', 'conv-10.20.5', 'conv-8.25.5')
+res_files = ('conv-5.6.5/results' ,)#, 'conv-5.30.5', 'conv-10.20.5', 'conv-8.25.5')
 #------------------------------------------------------------------------------ 
 
 #Load the data for testing
@@ -46,7 +43,9 @@ for res_name in res_files:
     if os.path.exists(folder):
         results.add_results(results_folder = folder,
                             name = res_name + ' test',
-                            prediction_file = 'test_prediction', analyze=False)
+                            prediction_file = 'test_prediction_0', 
+                            learning_curve_file = 'learning_curve',
+                            analyze=False)
 #        results.add_results(results_folder = folder,
 #                            name = res_name + ' train',
 #                            prediction_file = 'train_prediction', analyze=True)

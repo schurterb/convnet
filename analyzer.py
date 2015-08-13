@@ -41,6 +41,7 @@ class Analyzer(object):
             self.learning_curve += (None ,)
             print 'Error: Unable to load learning curve.'
 
+
         try:
             self.pred_file += (h5py.File(results_folder + pred_name + '.h5', 'r') ,)
             pred = self.pred_file[-1]['main'][...].astype('d', order='F')

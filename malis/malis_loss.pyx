@@ -39,7 +39,7 @@ def findMalisLoss(np.ndarray[int, ndim=3] compTrue,
     
     malisLoss(&dims[0], &affneg[0,0,0,0], &nhood[0,0], &compTrue[0,0,0], 0.3, True, &dloss_n[0,0,0,0], &lossAvg_n[0], &randIndex_n[0])
     
-    dloss = dloss_n - dloss_p
+    dloss = dloss_p - dloss_n
     lossAvg = (lossAvg_p + lossAvg_n)/2.0
     randIndex = (randIndex_p + randIndex_n)/2.0
         

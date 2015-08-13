@@ -2030,7 +2030,7 @@ static PyObject *__pyx_pf_5malis_10malis_loss_findMalisLoss(CYTHON_UNUSED PyObje
  * 
  *     malisLoss(&dims[0], &affneg[0,0,0,0], &nhood[0,0], &compTrue[0,0,0], 0.3, True, &dloss_n[0,0,0,0], &lossAvg_n[0], &randIndex_n[0])             # <<<<<<<<<<<<<<
  * 
- *     dloss = dloss_n - dloss_p
+ *     dloss = dloss_p - dloss_n
  */
   __pyx_t_33 = 0;
   __pyx_t_13 = -1;
@@ -2152,18 +2152,18 @@ static PyObject *__pyx_pf_5malis_10malis_loss_findMalisLoss(CYTHON_UNUSED PyObje
   /* "malis/malis_loss.pyx":42
  *     malisLoss(&dims[0], &affneg[0,0,0,0], &nhood[0,0], &compTrue[0,0,0], 0.3, True, &dloss_n[0,0,0,0], &lossAvg_n[0], &randIndex_n[0])
  * 
- *     dloss = dloss_n - dloss_p             # <<<<<<<<<<<<<<
+ *     dloss = dloss_p - dloss_n             # <<<<<<<<<<<<<<
  *     lossAvg = (lossAvg_p + lossAvg_n)/2.0
  *     randIndex = (randIndex_p + randIndex_n)/2.0
  */
-  __pyx_t_3 = PyNumber_Subtract(((PyObject *)__pyx_v_dloss_n), ((PyObject *)__pyx_v_dloss_p)); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 42; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_3 = PyNumber_Subtract(((PyObject *)__pyx_v_dloss_p), ((PyObject *)__pyx_v_dloss_n)); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 42; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_v_dloss = __pyx_t_3;
   __pyx_t_3 = 0;
 
   /* "malis/malis_loss.pyx":43
  * 
- *     dloss = dloss_n - dloss_p
+ *     dloss = dloss_p - dloss_n
  *     lossAvg = (lossAvg_p + lossAvg_n)/2.0             # <<<<<<<<<<<<<<
  *     randIndex = (randIndex_p + randIndex_n)/2.0
  * 
@@ -2177,7 +2177,7 @@ static PyObject *__pyx_pf_5malis_10malis_loss_findMalisLoss(CYTHON_UNUSED PyObje
   __pyx_t_5 = 0;
 
   /* "malis/malis_loss.pyx":44
- *     dloss = dloss_n - dloss_p
+ *     dloss = dloss_p - dloss_n
  *     lossAvg = (lossAvg_p + lossAvg_n)/2.0
  *     randIndex = (randIndex_p + randIndex_n)/2.0             # <<<<<<<<<<<<<<
  * 

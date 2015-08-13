@@ -251,12 +251,12 @@ class Trainer(object):
                
         scan_vals = [
             (self.index, self.batch_counter - (self.update_counter*self.batch_size) ),
-            (self.Xsub, T.set_subtensor(self.Xsub[:,:,:,self.index[0]], self.training_data[self.batch.get_value(borrow=True)[0, self.batch_counter.get_value(borrow=True)[0]]]
-                                                                                          [self.batch[1, self.batch_counter[0]]:self.batch[1, self.batch_counter[0]] +self.seg, 
+            (self.Xsub, T.set_subtensor(self.Xsub[:,:,:,self.index[0]], self.training_data[self.batch[0, self.batch_counter[0]],
+                                                                                           self.batch[1, self.batch_counter[0]]:self.batch[1, self.batch_counter[0]] +self.seg, 
                                                                                            self.batch[2, self.batch_counter[0]]:self.batch[2, self.batch_counter[0]] +self.seg, 
                                                                                            self.batch[3, self.batch_counter[0]]:self.batch[3, self.batch_counter[0]] +self.seg]) ),
-            (self.Ysub, T.set_subtensor(self.Ysub[:,self.index[0]], self.training_labels[self.batch.get_value(borrow=True)[0, self.batch_counter.get_value(borrow=True)[0]]]
-                                                                                        [:, self.batch[1, self.batch_counter[0]]+self.offset, 
+            (self.Ysub, T.set_subtensor(self.Ysub[:,self.index[0]], self.training_labels[self.batch[0, self.batch_counter[0]],
+                                                                                         :, self.batch[1, self.batch_counter[0]]+self.offset, 
                                                                                             self.batch[2, self.batch_counter[0]]+self.offset, 
                                                                                             self.batch[3, self.batch_counter[0]]+self.offset])),
             (self.batch_counter, self.batch_counter+1)
@@ -271,7 +271,7 @@ class Trainer(object):
     def __theano_training_model(self):
         
         self.__perform_updates()
-            
+        
         self.__set_log()
         
         if self.malis:  
@@ -395,16 +395,19 @@ class Trainer(object):
             self.data_size = ()
             self.num_dsets = 0
             for data, labels in zip(train_set, train_labels):
-                self.training_data += (theano.shared(data[:,:,:], borrow=True) ,)
-                self.training_labels += (theano.shared(labels[:,:,:,:], borrow=True) ,)
-                self.data_size += (self.training_data[-1].get_value(borrow=True).shape[-1] ,)
+                self.training_data += (data[()] ,)
+                self.training_labels += (labels[()] ,)
+                self.data_size += (self.training_data[-1].shape[-1] ,)
                 self.num_dsets += 1
         else:
-            self.training_data = (theano.shared(train_set[:,:,:], borrow=True) ,)
-            self.training_labels = (theano.shared(train_labels[:,:,:,:], borrow=True) ,)
-            self.data_size = (self.training_data[-1].get_value(borrow=True).shape[-1] ,)
-            self.num_dsets = 1
-            
+                self.training_data = (train_set[()] ,)
+                self.training_labels = (train_labels[()] ,)
+                self.data_size = (self.training_data[-1].shape[-1] ,)
+                self.num_dsets = 1
+        
+        self.training_data = theano.shared(np.asarray(self.training_data), name='data')
+        self.training_labels = theano.shared(np.asarray(self.training_labels), name='labels')       
+        
         #If there are ground-truth segmentations to load, load them into cpu memory 
         # (they aren't needed on the gpu)
         if train_seg and (type(train_seg) == tuple):
@@ -430,7 +433,7 @@ class Trainer(object):
                 for i in range(0, self.data_size[n]-self.seg):
                     for j in range(0, self.data_size[n]-self.seg):
                         for k in range(0, self.data_size[n]-self.seg):
-                            if(self.training_labels[n].get_value(borrow=True)[:,i+self.offset, j+self.offset, k+self.offset].sum() == 0):
+                            if(self.training_labels.get_value(borrow=True)[n][:,i+self.offset, j+self.offset, k+self.offset].sum() == 0):
                                 negative_samples += [[i, j, k]]
                 
                 self.negatives += (np.asarray(negative_samples, dtype='int32') ,)
@@ -444,8 +447,8 @@ class Trainer(object):
     """
     def __set_batches(self):
         samples = np.zeros((4, self.batch_size*self.log_interval), dtype = 'int32')
-        idx = self.rng.randint(0, self.num_dsets)
         for i in range(0, self.batch_size*self.log_interval):
+            idx = self.rng.randint(0, self.num_dsets)
             sel = self.rng.randn(1)
             if (sel > 0):   #Search for a positive example. They are common.
                 sample = self.rng.randint(0, self.data_size[idx] - self.seg, 3)
@@ -464,10 +467,10 @@ class Trainer(object):
     def __set_chunk(self):
         idx = self.rng.randint(0, self.num_dsets)
         sample = self.rng.randint(0, self.data_size[idx] - (self.chunk_size+(self.seg-1)), 3)
-        self.Xsub.set_value(self.training_data[idx].get_value(borrow=True)[sample[0]:sample[0]+self.chunk_size+(self.seg-1),
+        self.Xsub.set_value(self.training_data.get_value(borrow=True)[idx, sample[0]:sample[0]+self.chunk_size+(self.seg-1),
                                                                            sample[1]:sample[1]+self.chunk_size+(self.seg-1),
                                                                            sample[2]:sample[2]+self.chunk_size+(self.seg-1)].reshape((self.chunk_size+(self.seg-1),self.chunk_size+(self.seg-1),self.chunk_size+(self.seg-1),1)), borrow=True)
-        self.Ysub.set_value(np.transpose(self.training_labels[idx].get_value(borrow=True)[:, self.offset+sample[0]:self.offset+sample[0]+self.chunk_size,
+        self.Ysub.set_value(np.transpose(self.training_labels.get_value(borrow=True)[idx, :, self.offset+sample[0]:self.offset+sample[0]+self.chunk_size,
                                                                                              self.offset+sample[1]:self.offset+sample[1]+self.chunk_size,
                                                                                              self.offset+sample[2]:self.offset+sample[2]+self.chunk_size]), borrow=True)
         self.compTrue = np.transpose(self.segmentations[idx][self.offset+sample[0]:self.offset+sample[0]+self.chunk_size,
@@ -478,10 +481,10 @@ class Trainer(object):
     """
     Store the trainining and weight values at regular intervals
     """
-    def __store_status(self, error, error_type='MSE'):
+    def __store_status(self, error):
         
                    
-        if(error_type == 'rand'):
+        if self.malis:
             error_file = 'randIndex.csv'
         else:
             error_file = 'learning_curve.csv'
@@ -594,7 +597,7 @@ class Trainer(object):
                     if(print_updates):
                         print 'Rand Index for malis update',i,'(',(self.chunk_size**3),'examples):',randIndex
                         
-                    self.__store_status(randIndex, )
+                    self.__store_status(randIndex)
                 else:
                     self.__set_batches()
                     
