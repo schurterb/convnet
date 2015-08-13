@@ -108,9 +108,6 @@ class Analyzer(object):
         
         self.name += (kwargs.get('name', '') ,)
         
-        analyze_prediction = kwargs.get('analyze', True)
-        if analyze_prediction and (self.target != None) and (self.prediction[-1] != None):
-            self.__threshold_scan(self.results_folder[-1])
             
 
     """Plots the learning curves"""
