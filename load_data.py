@@ -8,7 +8,6 @@ Class for loading training or testing data. Currently only set up to support
  hdf5 files.
 """
 
-import os
 import h5py
 
 class LoadData(object):
@@ -19,29 +18,37 @@ class LoadData(object):
         if(self.file_type == 'hdf5'):
             if (type(self.folder) == tuple) or (type(self.folder) == list):
                 self.data_file = ()
-                self.label_file = ()
-                self.seg_file = ()
                 self.x = ()
+                if self.data_file_name:
+                    for folder in self.folder:
+                        self.data_file += (h5py.File(folder + self.data_file_name, 'r') ,)
+                        self.x += (self.data_file[-1]['main'] ,)
+                
+                self.label_file = ()
                 self.y = ()
+                if self.label_file_name:
+                    for folder in self.folder:  
+                        self.label_file += (h5py.File(folder + self.label_file_name, 'r') ,)
+                        self.y += (self.label_file[-1]['main'] ,)
+                        
+                self.seg_file = ()
                 self.z = ()
-                for folder in self.folder:
-                    self.data_file += (h5py.File(folder + self.data_file_name, 'r') ,)
-                    self.x += (self.data_file[-1]['main'] ,)
-                    
-                    self.label_file += (h5py.File(folder + self.label_file_name, 'r') ,)
-                    self.y += (self.label_file[-1]['main'] ,)
-                    
-                    self.seg_file += (h5py.File(folder + self.seg_file_name, 'r') ,)
-                    self.z += (self.seg_file[-1]['main'] ,)
+                if self.seg_file_name:
+                    for folder in self.folder:
+                        self.seg_file += (h5py.File(folder + self.seg_file_name, 'r') ,)
+                        self.z += (self.seg_file[-1]['main'] ,)
             else:
-                self.data_file = (h5py.File(self.folder + self.data_file_name, 'r') ,)
-                self.x = (self.data_file[-1]['main'] ,)
+                if self.data_file_name:
+                    self.data_file = (h5py.File(self.folder + self.data_file_name, 'r') ,)
+                    self.x = (self.data_file[-1]['main'] ,)
                 
-                self.label_file = (h5py.File(self.folder + self.label_file_name, 'r') ,)
-                self.y = (self.label_file[-1]['main'] ,)
+                if self.label_file_name:
+                    self.label_file = (h5py.File(self.folder + self.label_file_name, 'r') ,)
+                    self.y = (self.label_file[-1]['main'] ,)
                 
-                self.seg_file = (h5py.File(self.folder + self.seg_file_name, 'r') ,)
-                self.z = (self.seg_file[-1]['main'] ,)
+                if self.seg_file_name:
+                    self.seg_file = (h5py.File(self.folder + self.seg_file_name, 'r') ,)
+                    self.z = (self.seg_file[-1]['main'] ,)
             
         else:   
             raise TypeError("Unsupported file type")
@@ -59,12 +66,8 @@ class LoadData(object):
          self.seg_file_name = kwargs.get('seg_file_name', None)
          self.file_type = kwargs.get('file_type', 'hdf5')
 
-         self.home_folder = os.getcwd() + '/'
-         os.chdir('/.')
-         
          self.__read_files()
          
-         os.chdir(self.home_folder)
          
     """Return the data set"""
     def get_data(self):
