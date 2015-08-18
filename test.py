@@ -11,9 +11,11 @@ import os
 import ConfigParser
 import argparse
 import subprocess
+from analyzer import Analyzer
+from load_data import LoadData
 
 
-def testprediction(config_file, pred_file=None, label_file=None, out_path=None):
+def testprediction(config_file, pred_file=None, label_file=None, out_path=None):     
     
     #Open configuration file for this network
     config = ConfigParser.ConfigParser()
@@ -32,6 +34,23 @@ def testprediction(config_file, pred_file=None, label_file=None, out_path=None):
     name = "evaluating prediction by "+config_file.split('/')[-2]
         
     subprocess.call(["matlab -nosplash -nodisplay -r \"evaluate_predictions(\'"+label_file+"\',\'"+pred_file+"\',\'"+out_path+"\',\'"+name+"\'); exit\""], shell=True);#% (label_file, pred_file, out_path, name)])
+    
+
+def testprediction2(config_file, pred_file=None, label_file=None, out_path=None):     
+    
+    config = ConfigParser.ConfigParser()
+    config.read(config_file)
+    
+    test_data = LoadData(directory = config.get('Test Data', 'folders'), 
+                         data_file_name = config.get('Test Data', 'data_file'),
+                         label_file_name = config.get('Test Data', 'label_file'), 
+                         seg_file_name = config.get('Test Data', 'seg_file'))
+    
+    res = Analyzer(raw = test_data.get_data()[0], 
+                   target = test_data.get_labels()[0],
+                   results_folder = config)
+                   
+    res.analyze(0, pred_file=pred_file, label_file=label_file, out_path=out_path)
     
     
 def testall(directory, pred_file=None, label_file=None, out_path=None):

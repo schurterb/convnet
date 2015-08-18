@@ -44,7 +44,7 @@ for res_name in res_files:
         results.add_results(results_folder = folder,
                             name = res_name + ' test',
                             prediction_file = 'test_prediction_0', 
-                            learning_curve_file = 'randIndex',
+                            learning_curve_file = 'randIndex(10648 ex)',
                             analyze=False)
 #        results.add_results(results_folder = folder,
 #                            name = res_name + ' train',

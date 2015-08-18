@@ -206,6 +206,9 @@ class CNN(object):
         if not os.path.exists(results_folder):
             os.mkdir(results_folder)
         
+        if not type(x)==tuple or type(x)==list:
+            x = (x,)
+        
         for i in range(len(x)):
             xsub = x[i]
             out_size = xsub.shape[0] - self.sample_size + 1

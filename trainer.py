@@ -344,7 +344,7 @@ class Trainer(object):
         self.b1 = kwargs.get('beta1', 0.9)
         if(self.learning_method=='ADAM'): trainer_status += "beta 1 = "+`self.b1`+"\n"
         
-        self.b2 = kwargs.get('beta2', 0.999)
+        self.b2 = kwargs.get('beta2', 0.9)
         self.damp = kwargs.get('damping', 1.0e-08)
         if(self.learning_method=='RMSprop') or (self.learning_method=='ADAM'): 
             trainer_status += "beta 2 = "+`self.b2`+"\n"
@@ -357,7 +357,7 @@ class Trainer(object):
         self.seg = int(self.net_shape.shape[0]*(self.net_shape[0,1] -1) +1)
         self.offset = (self.seg -1)/2    
         if self.malis:
-            self.chunk_size = int(round((self.batch_size*self.log_interval)**(1.0/3.0)))
+            self.chunk_size = kwargs.get('chunk_size', 42)
             self.input_shape = (self.chunk_size+(self.seg-1), self.chunk_size+(self.seg-1), self.chunk_size+(self.seg-1), 1)
             self.output_shape = (self.chunk_size, self.chunk_size, self.chunk_size, 3)
         else:

@@ -50,6 +50,7 @@ def trainnetwork(config_file):
         print 'Initializing Trainer'             
         network_trainer = Trainer(network, training_data.get_data(), training_data.get_labels(), training_data.get_segments(),
                                   use_malis = config.getboolean('Training', 'use_malis'),
+                                  chunk_size = config.getint('Training', 'chunk_size'),  
                                   batch_size = config.getint('Training', 'batch_size'),
                                   learning_method = config.get('Training', 'learning_method'),
                                   learning_rate = config.getfloat('Training', 'learning_rate'), 

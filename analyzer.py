@@ -10,7 +10,9 @@ Analyzer class to perform a basic analysis of the results from training and
 
 from analysis import showStats
 from scipy.io import loadmat
-
+import ConfigParser
+import subprocess
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
@@ -89,7 +91,7 @@ class Analyzer(object):
             self.__threshold_scan(self.results_Folder[-1])
         else:
             self.name = ()            
-            
+        
         
     """Add more than one set of results to analyze at a time""" 
     def add_results(self, **kwargs):
@@ -108,6 +110,37 @@ class Analyzer(object):
         
         self.name += (kwargs.get('name', '') ,)
         
+    
+    """Analyzes predictions in results folder, if not already done"""
+    def analyze(self, result_name, **kwargs):
+        
+        if (type(result_name) == str):
+            res = self.name.index(result_name)
+        elif (type(result_name) == int) and (result_name < len(self.prediction)):
+            res = result_name
+        
+        if not os.path.isfile(self.results_folder[res]+'errors_new.mat'):
+            config = ConfigParser.ConfigParser()
+            config.read(self.results_folder+'network.cfg')
+            
+            label_file = kwargs.get('label_file', None)
+            pred_file = kwargs.get('pred_file', None)
+            out_path = kwargs.get('out_path', None)            
+            
+            if not label_file:
+                test_data_folder = config.get('Testing Data', 'folders').split(',');
+                label_file = test_data_folder[0] + config.get('Testing Data', 'label_file');
+        
+            if not pred_file and not out_path:
+                out_path = config.get('Testing', 'prediction_folder');
+                pred_file = out_path + config.get('Testing', 'prediction_file')+'_0.h5';
+            elif not pred_file: 
+                pred_file = config.get('Testing', 'prediction_folder') + config.get('Testing', 'prediction_file')+'_0.h5';
+        
+            name = "evaluating prediction by "+self.results_folder.split('/')[-2]
+            subprocess.call(["matlab -nosplash -nodisplay -r \"evaluate_predictions(\'"+label_file+"\',\'"+pred_file+"\',\'"+self.results_folder+"\',\'"+name+"\'); exit\""], shell=True);
+        else:
+            print('Analysis of prediction already exists. No analysis performed.\n')
             
 
     """Plots the learning curves"""
@@ -142,7 +175,7 @@ class Analyzer(object):
     def performance(self):
         
         
-        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(nrows=2, ncols=2)        
+        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(nrows=2, ncols=2)       
         #fig.set_facecolor('white')
         
         for i in range(len(self.results_folder)):
