@@ -1549,7 +1549,7 @@ static PyObject *__pyx_pf_5malis_10malis_loss_findMalisLoss(CYTHON_UNUSED PyObje
  *     predShape = (affEst.shape[0], affEst.shape[1], affEst.shape[2], affEst.shape[3])
  *     cdef np.ndarray[int, ndim=1] dims = np.asarray(predShape, dtype=np.intc)             # <<<<<<<<<<<<<<
  * 
- *     cdef np.ndarray[float, ndim=4] affpos = np.minimum(affTrue, affEst)
+ *     cdef np.ndarray[float, ndim=4] affpos = np.maximum(affTrue, affEst)
  */
   __pyx_t_5 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 26; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_5);
@@ -1592,13 +1592,13 @@ static PyObject *__pyx_pf_5malis_10malis_loss_findMalisLoss(CYTHON_UNUSED PyObje
   /* "malis/malis_loss.pyx":28
  *     cdef np.ndarray[int, ndim=1] dims = np.asarray(predShape, dtype=np.intc)
  * 
- *     cdef np.ndarray[float, ndim=4] affpos = np.minimum(affTrue, affEst)             # <<<<<<<<<<<<<<
+ *     cdef np.ndarray[float, ndim=4] affpos = np.maximum(affTrue, affEst)             # <<<<<<<<<<<<<<
  *     cdef np.ndarray[float, ndim=4] dloss_p = np.zeros(predShape, dtype=np.float32)
  *     cdef np.ndarray[double, ndim=1] lossAvg_p = np.zeros(1)
  */
   __pyx_t_3 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 28; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_minimum); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 28; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_maximum); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 28; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_t_3 = NULL;
@@ -1644,7 +1644,7 @@ static PyObject *__pyx_pf_5malis_10malis_loss_findMalisLoss(CYTHON_UNUSED PyObje
 
   /* "malis/malis_loss.pyx":29
  * 
- *     cdef np.ndarray[float, ndim=4] affpos = np.minimum(affTrue, affEst)
+ *     cdef np.ndarray[float, ndim=4] affpos = np.maximum(affTrue, affEst)
  *     cdef np.ndarray[float, ndim=4] dloss_p = np.zeros(predShape, dtype=np.float32)             # <<<<<<<<<<<<<<
  *     cdef np.ndarray[double, ndim=1] lossAvg_p = np.zeros(1)
  *     cdef np.ndarray[double, ndim=1] randIndex_p = np.zeros(1)
@@ -1688,7 +1688,7 @@ static PyObject *__pyx_pf_5malis_10malis_loss_findMalisLoss(CYTHON_UNUSED PyObje
   __pyx_t_2 = 0;
 
   /* "malis/malis_loss.pyx":30
- *     cdef np.ndarray[float, ndim=4] affpos = np.minimum(affTrue, affEst)
+ *     cdef np.ndarray[float, ndim=4] affpos = np.maximum(affTrue, affEst)
  *     cdef np.ndarray[float, ndim=4] dloss_p = np.zeros(predShape, dtype=np.float32)
  *     cdef np.ndarray[double, ndim=1] lossAvg_p = np.zeros(1)             # <<<<<<<<<<<<<<
  *     cdef np.ndarray[double, ndim=1] randIndex_p = np.zeros(1)
@@ -1750,7 +1750,7 @@ static PyObject *__pyx_pf_5malis_10malis_loss_findMalisLoss(CYTHON_UNUSED PyObje
  * 
  *     malisLoss(&dims[0], &affpos[0,0,0,0], &nhood[0,0], &compTrue[0,0,0], 0.3, True, &dloss_p[0,0,0,0], &lossAvg_p[0], &randIndex_p[0])             # <<<<<<<<<<<<<<
  * 
- *     cdef np.ndarray[float, ndim=4] affneg = np.maximum(affTrue, affEst)
+ *     cdef np.ndarray[float, ndim=4] affneg = np.minimum(affTrue, affEst)
  */
   __pyx_t_12 = 0;
   __pyx_t_13 = -1;
@@ -1872,13 +1872,13 @@ static PyObject *__pyx_pf_5malis_10malis_loss_findMalisLoss(CYTHON_UNUSED PyObje
   /* "malis/malis_loss.pyx":35
  *     malisLoss(&dims[0], &affpos[0,0,0,0], &nhood[0,0], &compTrue[0,0,0], 0.3, True, &dloss_p[0,0,0,0], &lossAvg_p[0], &randIndex_p[0])
  * 
- *     cdef np.ndarray[float, ndim=4] affneg = np.maximum(affTrue, affEst)             # <<<<<<<<<<<<<<
+ *     cdef np.ndarray[float, ndim=4] affneg = np.minimum(affTrue, affEst)             # <<<<<<<<<<<<<<
  *     cdef np.ndarray[float, ndim=4] dloss_n = np.zeros(predShape, dtype=np.float32)
  *     cdef np.ndarray[double, ndim=1] lossAvg_n = np.zeros(1)
  */
   __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 35; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_maximum); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 35; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_minimum); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 35; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_t_4 = NULL;
@@ -1924,7 +1924,7 @@ static PyObject *__pyx_pf_5malis_10malis_loss_findMalisLoss(CYTHON_UNUSED PyObje
 
   /* "malis/malis_loss.pyx":36
  * 
- *     cdef np.ndarray[float, ndim=4] affneg = np.maximum(affTrue, affEst)
+ *     cdef np.ndarray[float, ndim=4] affneg = np.minimum(affTrue, affEst)
  *     cdef np.ndarray[float, ndim=4] dloss_n = np.zeros(predShape, dtype=np.float32)             # <<<<<<<<<<<<<<
  *     cdef np.ndarray[double, ndim=1] lossAvg_n = np.zeros(1)
  *     cdef np.ndarray[double, ndim=1] randIndex_n = np.zeros(1)
@@ -1968,7 +1968,7 @@ static PyObject *__pyx_pf_5malis_10malis_loss_findMalisLoss(CYTHON_UNUSED PyObje
   __pyx_t_3 = 0;
 
   /* "malis/malis_loss.pyx":37
- *     cdef np.ndarray[float, ndim=4] affneg = np.maximum(affTrue, affEst)
+ *     cdef np.ndarray[float, ndim=4] affneg = np.minimum(affTrue, affEst)
  *     cdef np.ndarray[float, ndim=4] dloss_n = np.zeros(predShape, dtype=np.float32)
  *     cdef np.ndarray[double, ndim=1] lossAvg_n = np.zeros(1)             # <<<<<<<<<<<<<<
  *     cdef np.ndarray[double, ndim=1] randIndex_n = np.zeros(1)
@@ -4462,7 +4462,7 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_RefNannySetupContext("__Pyx_InitCachedConstants", 0);
 
   /* "malis/malis_loss.pyx":30
- *     cdef np.ndarray[float, ndim=4] affpos = np.minimum(affTrue, affEst)
+ *     cdef np.ndarray[float, ndim=4] affpos = np.maximum(affTrue, affEst)
  *     cdef np.ndarray[float, ndim=4] dloss_p = np.zeros(predShape, dtype=np.float32)
  *     cdef np.ndarray[double, ndim=1] lossAvg_p = np.zeros(1)             # <<<<<<<<<<<<<<
  *     cdef np.ndarray[double, ndim=1] randIndex_p = np.zeros(1)
@@ -4484,7 +4484,7 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_GIVEREF(__pyx_tuple__3);
 
   /* "malis/malis_loss.pyx":37
- *     cdef np.ndarray[float, ndim=4] affneg = np.maximum(affTrue, affEst)
+ *     cdef np.ndarray[float, ndim=4] affneg = np.minimum(affTrue, affEst)
  *     cdef np.ndarray[float, ndim=4] dloss_n = np.zeros(predShape, dtype=np.float32)
  *     cdef np.ndarray[double, ndim=1] lossAvg_n = np.zeros(1)             # <<<<<<<<<<<<<<
  *     cdef np.ndarray[double, ndim=1] randIndex_n = np.zeros(1)

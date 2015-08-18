@@ -25,14 +25,14 @@ def findMalisLoss(np.ndarray[int, ndim=3] compTrue,
     predShape = (affEst.shape[0], affEst.shape[1], affEst.shape[2], affEst.shape[3])
     cdef np.ndarray[int, ndim=1] dims = np.asarray(predShape, dtype=np.intc)
     
-    cdef np.ndarray[float, ndim=4] affpos = np.minimum(affTrue, affEst)
+    cdef np.ndarray[float, ndim=4] affpos = np.maximum(affTrue, affEst)
     cdef np.ndarray[float, ndim=4] dloss_p = np.zeros(predShape, dtype=np.float32)
     cdef np.ndarray[double, ndim=1] lossAvg_p = np.zeros(1)
     cdef np.ndarray[double, ndim=1] randIndex_p = np.zeros(1)
     
     malisLoss(&dims[0], &affpos[0,0,0,0], &nhood[0,0], &compTrue[0,0,0], 0.3, True, &dloss_p[0,0,0,0], &lossAvg_p[0], &randIndex_p[0])
     
-    cdef np.ndarray[float, ndim=4] affneg = np.maximum(affTrue, affEst)
+    cdef np.ndarray[float, ndim=4] affneg = np.minimum(affTrue, affEst)
     cdef np.ndarray[float, ndim=4] dloss_n = np.zeros(predShape, dtype=np.float32)
     cdef np.ndarray[double, ndim=1] lossAvg_n = np.zeros(1)
     cdef np.ndarray[double, ndim=1] randIndex_n = np.zeros(1)

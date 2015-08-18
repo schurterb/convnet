@@ -482,21 +482,18 @@ class Trainer(object):
     Store the trainining and weight values at regular intervals
     """
     def __store_status(self, error):
-        
-                   
+         
+        weights_folder = self.log_folder + 'weights/' 
         if self.malis:
             error_file = 'randIndex.csv'
+            trainer_folder = self.log_folder + 'trainer/malis/'
         else:
             error_file = 'learning_curve.csv'
+            trainer_folder = self.log_folder + 'trainer/basic/'
+            
         with open(self.log_folder + error_file, 'ab') as ef:
             fw = csv.writer(ef, delimiter=',')
             fw.writerow([error])
-        
-        weights_folder = self.log_folder + 'weights/'
-        if self.malis:
-            trainer_folder = self.log_folder + 'trainer/malis/'
-        else:
-            trainer_folder = self.log_folder + 'trainer/basic/'
         
         if not os.path.exists(weights_folder):
             os.mkdir(weights_folder)
@@ -597,7 +594,7 @@ class Trainer(object):
                     if(print_updates):
                         print 'Rand Index for malis update',i,'(',(self.chunk_size**3),'examples):',randIndex
                         
-                    self.__store_status(randIndex)
+                    self.__store_status(randIndex[0])
                 else:
                     self.__set_batches()
                     
