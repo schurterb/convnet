@@ -66,7 +66,6 @@ Current options for learning methods include
 * RMSprop - beta2 is the decay factor
 * ADAM - beta2 is the decay for the variance term (as with RMSprop)
 beta1 is the decay for the momentum term
-* malis - see this [paper](http://papers.nips.cc/paper/3887-maximin-affinity-learning-of-image-segmentation)
 
 Epoch size is defined to be approximately the entire training set and is, thus, not directly configurable.
 
@@ -75,14 +74,14 @@ Setting the early_stop flag allows the trainer to automatically stop when the co
 If a trainer folder (created by a previous training period) is available, 
 the training can be restarted without any discontinuity.
 
-A network from the networks folder, such as conv-8.25.5 can be trained directly by calling:
+A network from the `networks/` folder, such as conv-8.25.5 can be trained directly by calling:
 ```
-python train_network.py -n conv-8.25.5
+python train.py -n conv-8.25.5
 ```
 
 A network can also be defined in any properly formated config file and trained using the -c flag:
 ```
-python train_network.py -c /path/to/mynetwork.cfg
+python train.py -c /path/to/mynetwork.cfg
 ```
 -------------------------------------------------------------------------------
 ### Using MALIS
@@ -96,10 +95,26 @@ which is assigned at the CPU level. The size of the block of training labels is
 determined by the chunk_size parameter, which indicates the number of voxels 
 across the subsection of data.
 
+For more information about MALIS and how it works, see this [paper](http://papers.nips.cc/paper/3887-maximin-affinity-learning-of-image-segmentation).
+
 -------------------------------------------------------------------------------
-## Making Predictions
+## [Making Predictions](wiki/Making-Predictions)
+Predictions can be made on the test data referenced in [Testing Data] in the 
+[network config file](wiki/Network-Configuration) with the following command
+```
+python predict.py -n conv-8.25.5
+```
+for networks from the `networks/` folder.
 
+Alternatively, any network defined by properly formated config file can be used
+to make predictions on the [Testing Data].
+```
+python predict.py -c /path/to/mynetwork.cfg
+```
 
+The name of the file containing the prediction, as well as the folder it is 
+stored in, are defined in the [Predicting] section of the config file. 
+The prediction is automatically stored as a hdf5 file.
 
 -------------------------------------------------------------------------------
 ## Testing Predictions
