@@ -10,9 +10,9 @@ affinity graphs can then be connected via a connected-components algorith to
 produce a segmented image.
 
 -------------------------------------------------------------------------------
-###Defining Networks
+### Defining Networks
 All user-definable parameters for building, training, and testing a network are
-defined in network.ini. Parameters defining the structure of the network are
+defined in [network.cfg](https://github.com/schurterb/convolutional_network/wiki/Network-Configuration). Parameters defining the structure of the network are
 listed under the [Network] section.
 
 ```
@@ -40,7 +40,7 @@ of the weight files.
 
 -------------------------------------------------------------------------------
 ## Training Networks
-Parameters defining the training regiment for the network are listed under the
+Parameters defining the [training regiment](https://github.com/schurterb/convolutional_network/wiki/Training-a-Network) for the network are listed under the
 [Training] section. By default, all training is done stochastically.
 
 ```
@@ -98,9 +98,9 @@ across the subsection of data.
 For more information about MALIS and how it works, see this [paper](http://papers.nips.cc/paper/3887-maximin-affinity-learning-of-image-segmentation).
 
 -------------------------------------------------------------------------------
-## [Making Predictions](convolutional_network/wiki/Making-Predictions)
-Predictions can be made on the test data referenced in [Testing Data] in the 
-[network config file](wiki/Network-Configuration) with the following command
+## Making Predictions
+[Predictions can be made](https://github.com/schurterb/convolutional_network/wiki/Making-Predictions) on the test data referenced in [Testing Data] in the 
+[network config file](https://github.com/schurterb/convolutional_network/wiki/Network-Configuration) with the following command
 ```
 python predict.py -n conv-8.25.5
 ```
