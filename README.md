@@ -98,7 +98,7 @@ across the subsection of data.
 For more information about MALIS and how it works, see this [paper](http://papers.nips.cc/paper/3887-maximin-affinity-learning-of-image-segmentation).
 
 -------------------------------------------------------------------------------
-## [Making Predictions](wiki/Making-Predictions)
+## [Making Predictions](convolutional_network/wiki/Making-Predictions)
 Predictions can be made on the test data referenced in [Testing Data] in the 
 [network config file](wiki/Network-Configuration) with the following command
 ```
