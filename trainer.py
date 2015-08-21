@@ -26,7 +26,6 @@ class Trainer(object):
         
     """Define the cost function used to evaluate this network"""
     def __set_cost(self):
-        #self.out = self.out.dimshuffle(1,2,3,4,0)
         if(self.cost_func == 'rand'):
             self.cost = malisloss()(self.out.dimshuffle(4,3,2,1,0), self.Y.dimshuffle(4,3,2,1,0), self.C.dimshuffle(3,2,1,0))
         if(self.cost_func == 'class'):
