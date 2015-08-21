@@ -29,7 +29,9 @@ import h5py
 
 
 #Displays three images: the raw data, the corresponding labels, and the predictions
-def display(raw, label, pred, im_size, depthInit=1):
+def display(raw, label, pred, depthInit=1):
+    im_size = pred.shape[0]
+    crop = (raw.shape[0]-im_size)/2
     #fig = plt.figure(figsize=(20,10))
     fig = plt.figure()
     fig.set_facecolor('white')
@@ -39,16 +41,12 @@ def display(raw, label, pred, im_size, depthInit=1):
     depth0 = 0
 
     #Image is grayscale
-    im1 = ax1.imshow(raw[depthInit,:,:],cmap=cm.Greys_r)
+    im1 = ax1.imshow(raw[crop+depthInit,crop:-crop,crop:-crop],cmap=cm.Greys_r)
     ax1.set_title('Raw Image')
 
-    im = np.zeros((im_size,im_size,3))
-    #im[:,:,:]=label[depthInit,:,:,0]
     im2 = ax2.imshow(label[depthInit,:,:,:])
     ax2.set_title('Groundtruth')
 
-    im_ = np.zeros((im_size,im_size,3))
-    #im_[:,:,:]=pred[depthInit,:,:,0]
     im3 = ax3.imshow(pred[depthInit,:,:,:])
     ax3.set_title('Predictions')
     
@@ -60,7 +58,7 @@ def display(raw, label, pred, im_size, depthInit=1):
     
     def update(val):
         z = int(depth.val)
-        im1.set_data(raw[z,:,:])
+        im1.set_data(raw[crop+z,crop:-crop,crop:-crop])
         #im[:,:,:]=label[z,:,:,0]
         im2.set_data(label[z,:,:,:])
         #im_[:,:,:]=pred[z,:,:,0]
@@ -83,10 +81,14 @@ def malisScan(raw, label, pred, loss, depthInit=1):
 
     fig.subplots_adjust(left=0.2, bottom=0.25)
     depth0 = 0
+    
+    #Bring loss into focus
+    loss = loss-loss.min()
+    loss = (1.0 - loss/loss.max())*255*255
 
     #Image is grayscale
-    im0 = ax0.imshow(np.transpose(raw[crop:-crop,crop:-crop,crop+depthInit,0]),cmap=cm.Greys_r)
-    ax1.set_title('Raw Image')
+    im0 = ax0.imshow(raw[crop+depthInit,crop:-crop,crop:-crop],cmap=cm.Greys_r)
+    ax0.set_title('Raw Image')
 
     im1 = ax1.imshow(label[depthInit,:,:,:])
     ax1.set_title('Target Affinity')
@@ -105,7 +107,7 @@ def malisScan(raw, label, pred, loss, depthInit=1):
     
     def update(val):
         z = int(depth.val)
-        im0.set_data(np.transpose(raw[crop:-crop,crop:-crop,crop+z,0]))
+        im0.set_data(raw[crop+z,crop:-crop,crop:-crop])
         im1.set_data(label[z,:,:,:])
         im2.set_data(pred[z,:,:,:])
         im3.set_data(loss[z,:,:,:])

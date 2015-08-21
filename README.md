@@ -118,3 +118,6 @@ The prediction is automatically stored as a hdf5 file.
 
 -------------------------------------------------------------------------------
 ## Testing Predictions
+If a groundtruth affinity graph and corresponding segmentation is available 
+(and provided in the config), the prediction can be tested against the 
+groundtruth by calling the test script.

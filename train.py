@@ -15,7 +15,7 @@ import theano
 from cnn import CNN
 from trainer import Trainer
 from load_data import LoadData
-
+from analysis import display, malisScan
 
 def trainnetwork(config_file):
     
@@ -42,16 +42,15 @@ def trainnetwork(config_file):
     starttime=time.clock()
     #Create the network and trainer    
     if config.getboolean('Network', 'load_weights'):
-        print 'Initializing Network'
+        print 'Loading Network'
         network = CNN(weights_folder = config.get('General', 'directory')+config.get('Network', 'weights_folder'),
-                      activation = config.get('Network', 'activation'),
-                      cost_func = config.get('Network', 'cost_func'))
+                      activation = config.get('Network', 'activation'))
          
-        print 'Initializing Trainer'             
+        print 'Loading Trainer'             
         network_trainer = Trainer(network, training_data.get_data(), training_data.get_labels(), training_data.get_segments(),
-                                  use_malis = config.getboolean('Training', 'use_malis'),
                                   chunk_size = config.getint('Training', 'chunk_size'),  
                                   batch_size = config.getint('Training', 'batch_size'),
+                                  cost_func = config.get('Network', 'cost_func'),
                                   learning_method = config.get('Training', 'learning_method'),
                                   learning_rate = config.getfloat('Training', 'learning_rate'), 
                                   beta1 = config.getfloat('Training', 'beta1'),
@@ -70,8 +69,9 @@ def trainnetwork(config_file):
                       
         print 'Initializing Trainer'             
         network_trainer = Trainer(network, training_data.get_data(), training_data.get_labels(), training_data.get_segments(),
-                                  use_malis = config.getboolean('Training', 'use_malis'),
+                                  chunk_size = config.getint('Training', 'chunk_size'),  
                                   batch_size = config.getint('Training', 'batch_size'),
+                                  cost_func = config.get('Network', 'cost_func'),
                                   learning_method = config.get('Training', 'learning_method'),
                                   learning_rate = config.getfloat('Training', 'learning_rate'), 
                                   beta1 = config.getfloat('Training', 'beta1'),
@@ -87,15 +87,15 @@ def trainnetwork(config_file):
     starttime = time.clock()
     #Train the network
     print 'Training...\n'
-    train_error = network_trainer.train(config.getint('Training', 'num_epochs'), 
+    train_error, res = network_trainer.train(config.getint('Training', 'num_epochs'), 
                                         config.getboolean('Training', 'early_stop'), 
                                         config.getboolean('Training', 'print_updates'))
     total_time = time.clock() - starttime     
     #------------------------------------------------------------------------------   
-    print "Total Time     = " + `total_time` + " seconds"                            
-    
+    print "Total Time     =",total_time,"seconds"                   
+
     training_data.close()
-    return train_error
+    return res
     
 
 if __name__ == '__main__':

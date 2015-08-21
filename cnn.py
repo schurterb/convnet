@@ -136,17 +136,9 @@ class CNN(object):
         out = T.nnet.sigmoid(conv3d(out, self.w[-1], border_mode='valid') + self.b[-1].dimshuffle('x','x',0,'x','x'))          
         #Reshuffle the dimensions so that the last three are the xyz dimensions
         # and the second one is the number of affinity graph types (for each dimension)
-        self.out = out.dimshuffle(0, 2, 1, 3, 4)     
-        
-        
-    """Define the cost function used to evaluate this network"""
-    def __set_cost(self):
-        if (self.cost_func == 'class'):
-            self.cost = T.mean(T.nnet.binary_crossentropy(self.out, self.Y.dimshuffle(1,0,'x','x','x')), dtype=theano.config.floatX)
-        else:
-            self.cost = T.mean(1/2.0*((self.out - self.Y.dimshuffle(1,0,'x','x','x'))**2), dtype=theano.config.floatX)        
-    
-    
+        self.out = out.dimshuffle(2, 1, 3, 4, 0)
+
+
     """Initialize the network"""
     def __init__(self, **kwargs):
         
@@ -172,27 +164,19 @@ class CNN(object):
             self.__load_weights()
 
         #Input and Target variables for symbolic representation of network
-        self.X = T.tensor4('X')
-        self.Y = T.matrix('Y')            
+        self.X = T.tensor4('X')            
         
         #Create the network model
         self.__model()
         
-        #Create the cost funciton
-        self.__set_cost()
-        
         if(theano.config.device == 'cpu'):
             #Create a predicter based on this network model
-            self.predictor = theano.function(inputs=[self.X], outputs=self.out, allow_input_downcast=True)
-            #Create a function to calculate the loss of this network
-            self.eval_cost = theano.function(inputs=[self.X, self.Y], outputs=self.cost, allow_input_downcast=True)
+            self.forward = theano.function(inputs=[self.X], outputs=self.out, allow_input_downcast=True)
         else:
             #Create a predicter based on this network model
-            self.predictor = theano.function(inputs=[self.X], outputs=Out(gpu_from_host(self.out), borrow=True), allow_input_downcast=True)
+            self.forward = theano.function(inputs=[self.X], outputs=Out(gpu_from_host(self.out), borrow=True), allow_input_downcast=True)
             #self.predictor = theano.function(inputs=[self.X], outputs=self.out, allow_input_downcast=True)
             #Create a function to calculate the loss of this network
-            self.eval_cost = theano.function(inputs=[self.X, self.Y], outputs=Out(gpu_from_host(self.cost), borrow=True), allow_input_downcast=True)
-            #self.eval_cost = theano.function(inputs=[self.X, self.Y], outputs=self.cost, allow_input_downcast=True)
 
             
            
@@ -220,7 +204,7 @@ class CNN(object):
                     for k in range(0, out_size/chunk_size):
                         dset[:, i*chunk_size:(i+1)*chunk_size, 
                                 j*chunk_size:(j+1)*chunk_size,
-                                k*chunk_size:(k+1)*chunk_size] = np.asarray(self.predictor(xsub[i*chunk_size:(i+1)*chunk_size +self.sample_size -1,
+                                k*chunk_size:(k+1)*chunk_size] = np.asarray(self.forward(xsub[i*chunk_size:(i+1)*chunk_size +self.sample_size -1,
                                                                                                 j*chunk_size:(j+1)*chunk_size +self.sample_size -1, 
                                                                                                 k*chunk_size:(k+1)*chunk_size +self.sample_size -1
                                                                                                 ].reshape((chunk_size +self.sample_size -1, 
@@ -228,30 +212,7 @@ class CNN(object):
                                                                                                            chunk_size +self.sample_size -1, 1))
                                                                                            )).reshape((3, chunk_size, chunk_size, chunk_size))
             f.close()
-    
-        
-        
-    """
-    Calculate the loss of the networks prediction based on a target output
-    Params: x must be a cubic 3D matrix consisting of per-pixel input values
-            y must be a cubic 3D matrix consisting of per-pixel affinity labels
-    Returns: scalar loss value
-    """
-    def loss(self, x, y):
-        out_size = x.shape[0] - self.sample_size + 1
-        offset = out_size/2
-        
-        total_loss = 0
-        for i in range(0, out_size):
-            for j in range(0, out_size):
-                for k in range(0, out_size):
-                    total_loss += np.asarray(self.eval_cost(x[i:i+self.sample_size,
-                                                                j:j+self.sample_size, 
-                                                                k:k+self.sample_size].reshape((self.sample_size, self.sample_size, self.sample_size, 1)),
-                                                            y[:, i+offset, j+offset, k+offset].reshape((3, 1))))
-        
-        
-        return total_loss/((out_size+0.0)*3)
+
  
 
 

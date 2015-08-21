@@ -45,7 +45,7 @@ class Analyzer(object):
 
 
         try:
-            self.pred_file += (h5py.File(results_folder + pred_name + '.h5', 'r') ,)
+            self.pred_file += (h5py.File(results_folder + 'results/' + pred_name + '.h5', 'r') ,)
             pred = self.pred_file[-1]['main'][...].astype('d', order='F')
             self.prediction += (np.transpose(pred).astype(dtype='d', order='F') ,)
 #            pred_shape = self.pred_file[-1]['main'].shape
@@ -99,11 +99,11 @@ class Analyzer(object):
         self.results_folder += (kwargs.get('results_folder', None) ,)
         prediction_name = kwargs.get('prediction_file', None)
         learning_name = kwargs.get('learning_curve_file', None)
-        if (prediction_name == None) and (learning_name == None):
+        if not (prediction_name and learning_name):
             self.__load_results(self.results_folder[-1])
-        elif (learning_name == None):
+        elif not learning_name:
             self.__load_results(self.results_folder[-1], pred_name = prediction_name)
-        elif (prediction_name == None):
+        elif not prediction_name:
             self.__load_results(self.results_folder[-1], lc_name = learning_name)
         else:
             self.__load_results(self.results_folder[-1], learning_name, prediction_name)
@@ -120,25 +120,26 @@ class Analyzer(object):
             res = result_name
         
         if not os.path.isfile(self.results_folder[res]+'errors_new.mat'):
+            config_file = self.results_folder[res]+'/network.cfg'
             config = ConfigParser.ConfigParser()
-            config.read(self.results_folder+'network.cfg')
+            config.read(config_file)
             
             label_file = kwargs.get('label_file', None)
             pred_file = kwargs.get('pred_file', None)
             out_path = kwargs.get('out_path', None)            
             
             if not label_file:
-                test_data_folder = config.get('Testing Data', 'folders').split(',');
-                label_file = test_data_folder[0] + config.get('Testing Data', 'label_file');
+                test_data_folder = config.get('Testing Data', 'folders').split(',')
+                label_file = test_data_folder[0] + config.get('Testing Data', 'label_file')
         
             if not pred_file and not out_path:
-                out_path = config.get('Testing', 'prediction_folder');
-                pred_file = out_path + config.get('Testing', 'prediction_file')+'_0.h5';
+                out_path = config.get('General', 'directory')
+                pred_file = out_path + config.get('Testing', 'prediction_folder') + config.get('Testing', 'prediction_file')+'_0.h5'
             elif not pred_file: 
-                pred_file = config.get('Testing', 'prediction_folder') + config.get('Testing', 'prediction_file')+'_0.h5';
-        
-            name = "evaluating prediction by "+self.results_folder.split('/')[-2]
-            subprocess.call(["matlab -nosplash -nodisplay -r \"evaluate_predictions(\'"+label_file+"\',\'"+pred_file+"\',\'"+self.results_folder+"\',\'"+name+"\'); exit\""], shell=True);
+                pred_file = config.get('General', 'directory') + config.get('Testing', 'prediction_folder') + config.get('Testing', 'prediction_file')+'_0.h5'
+            print "Files:\n",pred_file,'\n',label_file,'\n',self.results_folder[res]
+            name = "evaluating prediction by "+self.results_folder[res].split('/')[-2]
+            subprocess.call(["matlab -nosplash -nodisplay -r \"evaluate_predictions(\'"+label_file+"\',\'"+pred_file+"\',\'"+self.results_folder[res]+"\',\'"+name+"\'); exit\""], shell=True);
         else:
             print('Analysis of prediction already exists. No analysis performed.\n')
             
@@ -295,10 +296,10 @@ class Analyzer(object):
             
             #All these images are in gray-scale
             plt.gray()
-            im1 = ax1.imshow(self.raw[depth0 ,crop:-crop,crop:-crop])
+            im1 = ax1.imshow(self.raw[crop+depth0,crop:-crop,crop:-crop])
             ax1.set_title('raw image', fontsize = 20)
             
-            im2 = ax2.imshow(self.target[depth0 ,crop:-crop,crop:-crop,:])
+            im2 = ax2.imshow(self.target[crop+depth0,crop:-crop,crop:-crop,:])
             ax2.set_title('groundtruth', fontsize = 20)
             
             im3 = ax3.imshow(self.prediction[res][depth0 ,:,:,:])
@@ -310,7 +311,7 @@ class Analyzer(object):
             
             def update(val):
                 zlayer = int(depth.val)
-                im1.set_data(self.raw[crop:-crop,crop:-crop,crop+zlayer])
+                im1.set_data(self.raw[crop+zlayer,crop:-crop,crop:-crop])
                 im2.set_data(self.target[crop+zlayer,crop:-crop,crop:-crop,:])
                 im3.set_data(self.prediction[res][zlayer,:,:,:])
                 fig.canvas.draw()

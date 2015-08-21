@@ -49,7 +49,7 @@ def makeprediction(config_file, data_file=None, out_path=None, out_file=None):
                            
             
     starttime = time.clock()                 
-    print 'Making Prediction'
+    print 'Making Predictions'
     if out_path and out_file:
         network.predict(test_data.get_data(),
                         results_folder = out_path,

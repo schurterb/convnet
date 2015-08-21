@@ -10,6 +10,12 @@ folders containing the results of training different networks.
 
 import os
 import numpy as np
+import scipy as sp
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+from pylab import *
+ion()
+
 from analyzer import Analyzer
 from load_data import LoadData
 
@@ -26,7 +32,7 @@ seg_file = 'groundtruth_seg.h5'
 #res_files = ('ADAM', 'ADAM_1', 'ADAM_2')#, 'ADAM_3')
 #res_files = ('rmsp_1', 'rmsp_2')#, 'rmsp_3')
 #res_files = ("results/deep_nets_1/ADAM", "results/learn_opt_res1/name='RMSprop'_lr=0.0001_b1=0.9_b2=0_dp=1e-08", "results/deep_nets_2/rmsp_1")
-res_files = ('conv-5.6.5', 'conv-5.30.5', 'conv-10.20.5', 'conv-8.25.5', 'conv-12.11.5')
+res_files = ('conv-5.6.5', 'backups/conv-5.6.5', 'conv-5.30.5', 'backups/conv-5.30.5')#, 'conv-10.20.5', 'conv-8.25.5', 'conv-12.11.5')
 #------------------------------------------------------------------------------ 
 
 #Load the data for testing
@@ -44,8 +50,7 @@ for res_name in res_files:
         results.add_results(results_folder = folder,
                             name = res_name + ' test',
                             prediction_file = 'test_prediction_0', 
-                            learning_curve_file = 'randIndex(10648 ex)',
-                            analyze=False)
+                            learning_curve_file = 'randIndex')
 #        results.add_results(results_folder = folder,
 #                            name = res_name + ' train',
 #                            prediction_file = 'train_prediction', analyze=True)
@@ -58,7 +63,7 @@ print 'Analysis complete'
 results.learning(10)
 
 ###Display the performance metrics
-#results.performance()
+results.performance()
 #
 ##Close test data
 ##test_data.close()
@@ -69,3 +74,4 @@ results.learning(10)
 #
 #print 'npos:',results.npos[0]
 #print 'nneg:',results.nneg[0]
+print "Displaying results"
