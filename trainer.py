@@ -450,10 +450,9 @@ class Trainer(object):
     
     """Make sure there is a file for the learning curve"""
     def __init_lc(self):
-        if not os.path.isfile(self.log_folder + 'learning_curve.csv'):
-            open(self.log_folder + 'learning_curve.csv', 'w').close()
-        if (self.cost_func == 'rand') and not os.path.isfile(self.log_folder + 'randIndex.csv'):
-            open(self.log_folder + 'randIndex.csv', 'w').close()
+        if not os.path.isfile(self.log_folder + self.cost_func + '_learning.csv'):
+            open(self.log_folder + self.cost_func + '_learning.csv', 'w').close()
+
     
     
     """

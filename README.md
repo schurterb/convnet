@@ -85,17 +85,13 @@ python train.py -c /path/to/mynetwork.cfg
 ```
 -------------------------------------------------------------------------------
 ### Using MALIS
-MALIS training can be activated simply by setting the use_malis flag, but is 
-substantially slower as the malisLoss calculation is not performed on the GPU. 
-As such, it should only be used to perfect networks that cannot be further
-improved using the Mean Square Error or Binary Cross-Entropy loss functions.
+MALIS is treated as training with the rand Index as a cost function. Thus, it 
+can be enabled by setting the `cost_func` variable in the trainer to `'rand'`. 
+Other cost function options include the Mean-Square Error (`'MSE'`) and the 
+binary crossentropy function (`'class'`, since it is generally used for binary 
+classification).
 
-MALIS training is done with one contiguous block of training data at a time, 
-which is assigned at the CPU level. The size of the block of training labels is
-determined by the chunk_size parameter, which indicates the number of voxels 
-across the subsection of data.
-
-For more information about MALIS and how it works, see this [paper](http://papers.nips.cc/paper/3887-maximin-affinity-learning-of-image-segmentation).
+For more information about the rand Index and MALIS training, see this [paper](http://papers.nips.cc/paper/3887-maximin-affinity-learning-of-image-segmentation).
 
 -------------------------------------------------------------------------------
 ## Making Predictions
@@ -118,9 +114,11 @@ The prediction is automatically stored as a hdf5 file.
 
 -------------------------------------------------------------------------------
 ## Testing Predictions
-<<<<<<< HEAD
+
 If a groundtruth affinity graph and corresponding segmentation is available 
-(and provided in the config), the prediction can be tested against the 
-groundtruth by calling the test script.
-=======
->>>>>>> 1648b5f1f45747dabb46c9e07073b34b13ab598b
+(and provided in the config), the predicted affinity graph can be tested against
+the groundtruth by calling the test script.
+```
+python test.py -n conv-8.25.5
+```
+

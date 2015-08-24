@@ -23,7 +23,7 @@ from load_data import LoadData
 results_folder = 'networks/'
 #results_folder = ''
 
-test_data_folder = '/nobackup/turaga/data/fibsem_medulla_7col/tstvol-520-2-h5/'
+test_data_folder = '/nobackup/turaga/data/fibsem_medulla_7col/tstvol-520-1-h5/'
 data_file = 'img_normalized.h5'
 label_file = 'groundtruth_aff.h5'
 seg_file = 'groundtruth_seg.h5'
@@ -62,14 +62,5 @@ results.learning(10)
 
 ###Display the performance metrics
 #results.performance()
-#
-##Close test data
-##test_data.close()
-#print 'thresholds: ',results.theta
-#
-#print 'tp:',results.tp[0]
-#print 'fp:',results.fp[0]
-#
-#print 'npos:',results.npos[0]
-#print 'nneg:',results.nneg[0]
+
 print "Displaying results"

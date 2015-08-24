@@ -40,11 +40,16 @@ def display(raw, label, pred, depthInit=1):
     fig.subplots_adjust(left=0.2, bottom=0.25)
     depth0 = 0
 
+    raw = np.transpose(raw)
+    label = label    
+    pred = np.transpose(pred, (2,1,0,3))
+    
+
     #Image is grayscale
     im1 = ax1.imshow(raw[crop+depthInit,crop:-crop,crop:-crop],cmap=cm.Greys_r)
     ax1.set_title('Raw Image')
 
-    im2 = ax2.imshow(label[depthInit,:,:,:])
+    im2 = ax2.imshow(label[crop+depthInit,crop:-crop,crop:-crop,:])
     ax2.set_title('Groundtruth')
 
     im3 = ax3.imshow(pred[depthInit,:,:,:])
@@ -60,7 +65,7 @@ def display(raw, label, pred, depthInit=1):
         z = int(depth.val)
         im1.set_data(raw[crop+z,crop:-crop,crop:-crop])
         #im[:,:,:]=label[z,:,:,0]
-        im2.set_data(label[z,:,:,:])
+        im2.set_data(label[crop+z,crop:-crop,crop:-crop,:])
         #im_[:,:,:]=pred[z,:,:,0]
         im3.set_data(pred[z,:,:,:])
         fig.canvas.draw()

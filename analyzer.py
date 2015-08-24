@@ -16,6 +16,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
+import matplotlib.cm as cm
 import h5py
 
 class Analyzer(object):
@@ -83,6 +84,7 @@ class Analyzer(object):
 #        targ_shape = self.target.shape
 #        self.target = self.target[...].reshape((targ_shape[1],targ_shape[2],targ_shape[3],3)).astype(dtype='d', order='F')
         self.raw = kwargs.get('raw', None)
+        if self.raw: self.raw = np.transpose(self.raw)
         
         if (folder != None) and (self.target != None):
             self.results_folder += (folder ,)
@@ -283,41 +285,43 @@ class Analyzer(object):
             else:
                 print 'Invalid Entry'
                 return;
-                
-            fig = plt.figure(figsize=(20,10))
+             
+            depthInit = 0 
+            im_size = self.prediction[res].shape[0]
+            crop = (self.raw.shape[0]-im_size)/2
+            #fig = plt.figure(figsize=(20,10))
+            fig = plt.figure()
             fig.set_facecolor('white')
-            ax1 = fig.add_subplot(1,3,1)
-            ax2 = fig.add_subplot(1,3,2)
-            ax3 = fig.add_subplot(1,3,3)
-            fig.subplots_adjust(left=0.25, bottom=0.25)
+            ax1,ax2,ax3 = fig.add_subplot(1,3,1),fig.add_subplot(1,3,2),fig.add_subplot(1,3,3)
+            
+            fig.subplots_adjust(left=0.2, bottom=0.25)
             depth0 = 0
+        
+            #Image is grayscale
+            im1 = ax1.imshow(self.raw[crop+depthInit,crop:-crop,crop:-crop],cmap=cm.Greys_r)
+            ax1.set_title('Raw Image')
+        
+            im2 = ax2.imshow(self.target[crop+depthInit,crop:-crop,crop:-crop,:])
+            ax2.set_title('Groundtruth')
+        
+            im3 = ax3.imshow(self.prediction[res][depthInit,:,:,:])
+            ax3.set_title('Predictions')
             
-            crop = (self.target.shape[0] - self.prediction[res].shape[0])/2        
-            
-            #All these images are in gray-scale
-            plt.gray()
-            im1 = ax1.imshow(self.raw[crop+depth0,crop:-crop,crop:-crop])
-            ax1.set_title('raw image', fontsize = 20)
-            
-            im2 = ax2.imshow(self.target[crop+depth0,crop:-crop,crop:-crop,:])
-            ax2.set_title('groundtruth', fontsize = 20)
-            
-            im3 = ax3.imshow(self.prediction[res][depth0 ,:,:,:])
-            ax3.set_title('prediction', fontsize = 20)     
-            
-            axcolor = 'lightgoldenrodyellow'
-            axdepth = fig.add_axes([0.25, 0.3, 0.65, 0.03], axisbg=axcolor)
-            depth = Slider(axdepth, 'Min', 0, self.prediction[res].shape[-1]-crop, valinit=depth0, valfmt='%0.0f')
+            axdepth = fig.add_axes([0.25, 0.3, 0.65, 0.03], axisbg='white')
+            #axzoom  = fig.add_axes([0.25, 0.15, 0.65, 0.03], axisbg=axcolor)
+        
+            depth = Slider(axdepth, 'Min', 0, im_size, valinit=depth0,valfmt='%0.0f')
+            #zoom = Slider(axmax, 'Max', 0, 250, valinit=max0)
             
             def update(val):
-                zlayer = int(depth.val)
-                im1.set_data(self.raw[crop+zlayer,crop:-crop,crop:-crop])
-                im2.set_data(self.target[crop+zlayer,crop:-crop,crop:-crop,:])
-                im3.set_data(self.prediction[res][zlayer,:,:,:])
+                z = int(depth.val)
+                im1.set_data(self.raw[crop+z,crop:-crop,crop:-crop])
+                #im[:,:,:]=label[z,:,:,0]
+                im2.set_data(self.target[crop+z,crop:-crop,crop:-crop,:])
+                #im_[:,:,:]=pred[z,:,:,0]
+                im3.set_data(self.prediction[res][z,:,:,:])
                 fig.canvas.draw()
-                
-            fig.suptitle(self.name[res], fontsize = 20)
-            depth.on_changed(update)        
+            depth.on_changed(update)
             plt.show()
 
             
