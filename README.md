@@ -74,14 +74,14 @@ Setting the early_stop flag allows the trainer to automatically stop when the co
 If a trainer folder (created by a previous training period) is available, 
 the training can be restarted without any discontinuity.
 
-A network from the `networks/` folder, such as conv-8.25.5 can be trained directly by calling:
+A network from the `networks/` folder, such as testnet can be trained directly by calling:
 ```
-python train.py -n conv-8.25.5
+python train -n testnet
 ```
 
 A network can also be defined in any properly formated config file and trained using the -c flag:
 ```
-python train.py -c /path/to/mynetwork.cfg
+python train -c /path/to/mynetwork.cfg
 ```
 -------------------------------------------------------------------------------
 ### Using MALIS
@@ -98,14 +98,14 @@ For more information about the rand Index and MALIS training, see this [paper](h
 [Predictions can be made](https://github.com/schurterb/convolutional_network/wiki/Making-Predictions) on the test data referenced in [Testing Data] in the 
 [network config file](https://github.com/schurterb/convolutional_network/wiki/Network-Configuration) with the following command
 ```
-python predict.py -n conv-8.25.5
+python predict -n testnet
 ```
 for networks from the `networks/` folder.
 
 Alternatively, any network defined by properly formated config file can be used
 to make predictions on the [Testing Data].
 ```
-python predict.py -c /path/to/mynetwork.cfg
+python predict -c /path/to/mynetwork.cfg
 ```
 
 The name of the file containing the prediction, as well as the folder it is 
@@ -119,7 +119,7 @@ If a groundtruth affinity graph and corresponding segmentation is available
 (and provided in the config), the predicted affinity graph can be tested against
 the groundtruth by calling the test script.
 ```
-python test.py -n conv-8.25.5
+python test.py -n testnet
 ```
 The results of the test are stored in errors_new.mat and a plot of those results
 in errors_new.png. 
