@@ -121,4 +121,27 @@ the groundtruth by calling the test script.
 ```
 python test.py -n conv-8.25.5
 ```
+The results of the test are stored in errors_new.mat and a plot of those results
+in errors_new.png. 
+
+-------------------------------------------------------------------------------
+## Viewing Results
+
+The results of training and testing a network can be viewed for single network 
+or for multiple networks simultaneously by calling ShowResults from the Ipython
+console. 
+```python
+from showresults import ShowResults
+res = ShowResults(network='conv-8.25.5')
+res.learning('MSE', 10)
+res.performance()
+res.display('conv-8.25.5')
+```
+
+* ShowResults.learning() displays the learning curve associated with the specified
+cost function (if it exists). It can also average over the designated number
+of values to produce a smoother image.
+* ShowResults.performance() displays the performance metrics measured by the test script.
+* ShowResults.display() shows the predicted affinity graph along side the raw 
+image and target affinities.
 
