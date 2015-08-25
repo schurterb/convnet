@@ -1,32 +1,12 @@
 # These are a set of functions to aid viewing of 3D EM images and their
 # associated affinity graphs
 
-import os
 import matplotlib
-matplotlib.use('Agg')
+#matplotlib.use('Agg')
 import matplotlib.cm as cm
 import numpy as np
 from matplotlib.widgets import Slider
 import matplotlib.pyplot as plt
-import h5py
-
-#from analysis import *
-
-
-### Just to access the images...
-#data_folder = '/nobackup/turaga/data/fibsem_medulla_7col/trvol-250-1-h5/'
-#
-##Open training data
-#f = h5py.File(data_folder + 'img_normalized.h5', 'r')
-#data_set = f['main']
-#
-##Open training labels
-#g = h5py.File(data_folder + 'groundtruth_aff.h5', 'r')
-#label_set = g['main']  #3,z,y,x
-#label_set = np.transpose(label_set)
-#label_set = np.swapaxes(label_set,0,1)
-#print label_set.shape
-
 
 #Displays three images: the raw data, the corresponding labels, and the predictions
 def display(raw, label, pred, depthInit=1):
@@ -72,7 +52,6 @@ def display(raw, label, pred, depthInit=1):
     depth.on_changed(update)
     plt.show()
 
-#display(data_set, label_set, label_set, 250)
 
 #Displays three images: the raw data, the corresponding labels, and the predictions
 def malisScan(raw, label, pred, loss, depthInit=1):

@@ -10,14 +10,11 @@ Call a matlab function to test the predictions made by a convolutional network.
 import os
 import ConfigParser
 import argparse
-from analyzer import Analyzer
+from analysis import Analyzer
 from load_data import LoadData
-import matplotlib
-from pylab import ioff
 
 
 def testprediction(config_file, pred_file=None, label_file=None, out_path=None):     
-    matplotlib.pylab.ion()
     config = ConfigParser.ConfigParser()
     config.read(config_file)
     
@@ -33,17 +30,9 @@ def testprediction(config_file, pred_file=None, label_file=None, out_path=None):
                     prediction_file = config.get('Testing', 'prediction_file')+'_0', 
                     learning_curve_file = 'learning_curve')           
     res.analyze(-1, pred_file=pred_file, label_file=label_file, out_path=out_path)
-    
-    print "Displaying Results"
-    res.learning()
-    res.performance()
-    #res.display(0)
-    
-    raw_input("Press enter to close results")
-    
+
     
 def testall(directory, pred_file=None, label_file=None, out_path=None):
-    matplotlib.pylab.ion()
     folders = os.listdir(directory)
     config_file = directory+folders[0]+"/network.cfg"
     config = ConfigParser.ConfigParser()
@@ -68,12 +57,7 @@ def testall(directory, pred_file=None, label_file=None, out_path=None):
                         learning_curve_file = 'learning_curve')
                            
         res.analyze(-1, pred_file=pred_file, label_file=label_file, out_path=out_path)
-        
-    print "Displaying Results"
-    res.learning('MSE', 10)
-    res.performance()
-    
-    raw_input("Press enter to close results")
+
 
 
 if __name__ == '__main__':

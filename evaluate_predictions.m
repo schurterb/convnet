@@ -252,7 +252,8 @@ function [r_err, r_tp, r_fp, r_pos, r_neg] = ...
         watershed = markerWatershed(affEst, nHood, compEst);
 
         [ri, stats] = randIndex(compTrue, watershed);
-        r_err = 1-ri;
+%        r_err = 1-ri;
+        r_err = ri
         r_tp = stats.truePos;
         r_fp = stats.falsePos;
 
