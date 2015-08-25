@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from pylab import *
 ion()
 
-from analyzer import Analyzer
+from oldanalyzer import Analyzer
 from load_data import LoadData
 
 
@@ -29,8 +29,8 @@ label_file = 'groundtruth_aff.h5'
 seg_file = 'groundtruth_seg.h5'
 
 
-res_files = ('conv-5.6.5', 'conv-5.30.5')#, 'conv-10.20.5', 'conv-8.25.5', 'conv-12.11.5')
-#res_files = ('conv-5.6.5', 'conv-5.30.5', 'conv-8.25.5', 'conv-8.50.5', 'conv-9.20.5', 'conv-10.20.5', 'conv-12.11.5')
+#res_files = ('conv-5.6.5', 'conv-5.30.5')#, 'conv-10.20.5', 'conv-8.25.5', 'conv-12.11.5')
+res_files = ('conv-5.6.5', 'conv-5.30.5', 'conv-8.25.5', 'conv-8.50.5', 'conv-9.20.5', 'conv-10.20.5', 'conv-12.11.5')
 #------------------------------------------------------------------------------ 
 
 #Load the data for testing
@@ -48,7 +48,7 @@ for res_name in res_files:
         results.add_results(results_folder = folder,
                             name = res_name + ' test',
                             prediction_file = 'test_prediction_0', 
-                            learning_curve_file = 'randIndex')
+                            learning_curve_file = 'MSE_learning')
 #        results.add_results(results_folder = folder,
 #                            name = res_name + ' train',
 #                            prediction_file = 'train_prediction', analyze=True)

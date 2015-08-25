@@ -21,39 +21,39 @@ import h5py
 
 class Analyzer(object):
 
-    """Load the learning curve from a folder"""
-    def __load_results(self, results_folder, lc_name='learning_curve', pred_name='prediction'):
+    """Load the specified learning curve"""
+    def __load_learning(self, results_folder, lc_type = 'MSE', lc_name=None):
         try:
-            try:
+            if lc_name:
                 f = open(results_folder + lc_name + '.csv', 'r')
-                lc = f.read()
-                f.close()
-                
-                lc = lc.split('\r\n')
-                tmp = lc[0].split(',')
-                lc = np.append(tmp, lc[1::])
-                lr_curve = np.zeros(lc.size)
-                for i in range(lc.size):
-                    if(lc[i] != ''):
-                        lr_curve[i] = float(lc[i])
-                
-                self.learning_curve += (np.asarray(lr_curve) ,)
-            except:
-                self.learning_curve += (np.genfromtxt(results_folder + lc_name + '.csv', delimiter=',') ,)
+            else:
+                f = open(results_folder + lc_type + '_learning.csv', 'r')
+            lc = f.read()
+            f.close()
+            
+            lc = lc.split('\r\n')
+            tmp = lc[0].split(',')
+            lc = np.append(tmp, lc[1::])
+            lr_curve = np.zeros(lc.size)
+            for i in range(lc.size):
+                if(lc[i] != ''):
+                    lr_curve[i] = float(lc[i])
+            
+            return np.asarray(lr_curve)
         except:
-            self.learning_curve += (None ,)
-            print 'Error: Unable to load learning curve.'
+            print 'Warning: Unable to load learning curve.'
+            return None
 
 
+    """Load the affinity predictions from a folder"""
+    def __load_prediction(self, results_folder, pred_name='prediction'):
         try:
             self.pred_file += (h5py.File(results_folder + 'results/' + pred_name + '.h5', 'r') ,)
             pred = self.pred_file[-1]['main'][...].astype('d', order='F')
             self.prediction += (np.transpose(pred).astype(dtype='d', order='F') ,)
-#            pred_shape = self.pred_file[-1]['main'].shape
-#            self.prediction += (self.pred_file[-1]['main'][...].reshape((pred_shape[1],pred_shape[2],pred_shape[3],3)).astype(dtype='d', order='F') ,)
         except:
             self.prediction += (None ,)
-            print 'Error: Unable to load test prediction.'
+            print 'Warning: Unable to load test prediction.'
             
     
     def __init__(self, **kwargs):
@@ -75,21 +75,18 @@ class Analyzer(object):
         folder = kwargs.get('results_folder', None)
         self.results_folder = ()
         self.pred_file = ()
-        self.learning_curve = ()
         self.prediction = ()
                 
         self.target = kwargs.get('target', None)
         targ = self.target[...].astype(dtype='d', order='F')
         self.target = np.transpose(targ).astype(dtype='d', order='F')
-#        targ_shape = self.target.shape
-#        self.target = self.target[...].reshape((targ_shape[1],targ_shape[2],targ_shape[3],3)).astype(dtype='d', order='F')
         self.raw = kwargs.get('raw', None)
         if self.raw: self.raw = np.transpose(self.raw)
         
         if (folder != None) and (self.target != None):
             self.results_folder += (folder ,)
             self.name = (kwargs.get('name', '') ,)
-            self.__load_results(self.results_folder[-1])
+            self.__load_prediction(self.results_folder[-1])
             self.__threshold_scan(self.results_Folder[-1])
         else:
             self.name = ()            
@@ -100,15 +97,10 @@ class Analyzer(object):
                 
         self.results_folder += (kwargs.get('results_folder', None) ,)
         prediction_name = kwargs.get('prediction_file', None)
-        learning_name = kwargs.get('learning_curve_file', None)
-        if not (prediction_name and learning_name):
-            self.__load_results(self.results_folder[-1])
-        elif not learning_name:
-            self.__load_results(self.results_folder[-1], pred_name = prediction_name)
-        elif not prediction_name:
-            self.__load_results(self.results_folder[-1], lc_name = learning_name)
+        if not prediction_name:
+            self.__load_prediction(self.results_folder[-1])
         else:
-            self.__load_results(self.results_folder[-1], learning_name, prediction_name)
+            self.__load_prediction(self.results_folder[-1], prediction_name)
         
         self.name += (kwargs.get('name', '') ,)
         
@@ -147,30 +139,38 @@ class Analyzer(object):
             
 
     """Plots the learning curves"""
-    def learning(self, averaging_segment=1):  
-        num_curves = len(self.learning_curve)
+    def learning(self, lc_type = 'MSE', averaging_segment=1):
+        learning_curve = ()
+        curve_names = ()
+        for i in range(len(self.results_folder)):
+            lc = self.__load_learning(self.results_folder[i], lc_type)
+            if not (lc == None): 
+                learning_curve += (lc ,)
+                curve_names += (self.name[i] ,)
+            
+        num_curves = len(learning_curve)
         n_figs = num_curves/7   #There can be seven unique auto-generated line colors
         rem_curves = num_curves%7
         
-        assert len(self.name) == num_curves
         for f in range(0, n_figs):
             plt.figure()
             for i in range(0, 7):
-                if (self.learning_curve[f*7 + i] != None):
-                    idx = self.learning_curve[f*7 + i].size/averaging_segment
-                    lc = np.mean(self.learning_curve[f*7 + i][0:idx*averaging_segment].reshape(idx, averaging_segment), 1)
-                    plt.plot(lc, label=self.name[f*7 + i])
+                if learning_curve[f*7 + i].any():
+                    idx = learning_curve[f*7 + i].size/averaging_segment
+                    lc = np.mean(learning_curve[f*7 + i][0:idx*averaging_segment].reshape(idx, averaging_segment), 1)
+                    plt.plot(lc, label=curve_names[f*7 + i])
             plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=2, borderaxespad=0., prop={'size':20})
             plt.grid()
         if(rem_curves > 0):
             plt.figure()
-            for i in range(0, len(self.learning_curve[-rem_curves::])):
-                if (self.learning_curve[n_figs*7 + i] != None):
-                    idx = self.learning_curve[n_figs*7 + i].size/averaging_segment
-                    lc = np.mean(self.learning_curve[n_figs*7 + i][0:idx*averaging_segment].reshape(idx, averaging_segment), 1)
-                    plt.plot(lc, label=self.name[n_figs*7 + i])
+            for i in range(0, len(learning_curve[-rem_curves::])):
+                if learning_curve[n_figs*7 + i].any():
+                    idx = learning_curve[n_figs*7 + i].size/averaging_segment
+                    lc = np.mean(learning_curve[n_figs*7 + i][0:idx*averaging_segment].reshape(idx, averaging_segment), 1)
+                    plt.plot(lc, label=curve_names[n_figs*7 + i])
             plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=2, borderaxespad=0., prop={'size':20})
             plt.grid()
+        plt.show()
 
     
     
@@ -182,46 +182,46 @@ class Analyzer(object):
         #fig.set_facecolor('white')
         
         for i in range(len(self.results_folder)):
-            mData = loadmat(self.results_folder[i] + 'errors_new.mat')
-        
-            #Show rand Index results
-            rTheta = mData.get('r_thresholds')[0]
-            rErr = mData.get('r_fscore')[0]
-            rFPR = mData.get('r_fp')[0]/mData.get('r_neg')[0]
-            rTPR = mData.get('r_tp')[0]/mData.get('r_pos')[0]
-        
-            ax1.plot(rTheta,rErr,label=self.name[i])
-            ax1.set_title('Rand F-Score', fontsize=20)
-            ax1.set_ylabel('f-score', fontsize=20)
-            ax1.set_xlabel('threshold', fontsize=20)
+            if os.path.isfile(self.results_folder[i] + 'errors_new.mat'):
+                mData = loadmat(self.results_folder[i] + 'errors_new.mat')
             
-            ax2.plot(rFPR, rTPR,label=self.name[i])
-            ax2.set_ylim([0,1])
-            ax2.set_title('Rand ROC', fontsize=20)
-            ax2.set_ylabel('true-positive rate', fontsize=20)
-            ax2.set_xlabel('false-positive rate', fontsize=20)
+                #Show rand Index results
+                rTheta = mData.get('r_thresholds')[0]
+                rErr = mData.get('r_fscore')[0]
+                rFPR = mData.get('r_fp')[0]/mData.get('r_neg')[0]
+                rTPR = mData.get('r_tp')[0]/mData.get('r_pos')[0]
             
-            #Show pixel error results
-            pTheta = mData.get('p_thresholds')[0]
-            pErr = mData.get('p_err')[0]
-            pFPR = mData.get('p_fp')[0]/mData.get('p_neg')[0]
-            pTPR = mData.get('p_tp')[0]/mData.get('p_pos')[0]
-        
-            ax3.plot(pTheta,pErr,label=self.name[i])
-            ax3.set_title('Pixel Error', fontsize=20)
-            ax3.set_ylabel('pixel error', fontsize=20)
-            ax3.set_xlabel('threshold', fontsize=20)
-        
-            ax4.plot(pFPR, pTPR,label=self.name[i])
-            ax4.set_ylim([0,1])
-            ax4.set_title('Pixel ROC', fontsize=20)
-            ax4.set_ylabel('true-positive rate', fontsize=20)
-            ax4.set_xlabel('false-positive rate', fontsize=20)
+                ax1.plot(rTheta,rErr,label=self.name[i])
+                ax1.set_title('Rand F-Score', fontsize=20)
+                ax1.set_ylabel('f-score', fontsize=20)
+                ax1.set_xlabel('threshold', fontsize=20)
+                
+                ax2.plot(rFPR, rTPR,label=self.name[i])
+                ax2.set_ylim([0,1])
+                ax2.set_title('Rand ROC', fontsize=20)
+                ax2.set_ylabel('true-positive rate', fontsize=20)
+                ax2.set_xlabel('false-positive rate', fontsize=20)
+                
+                #Show pixel error results
+                pTheta = mData.get('p_thresholds')[0]
+                pErr = mData.get('p_err')[0]
+                pFPR = mData.get('p_fp')[0]/mData.get('p_neg')[0]
+                pTPR = mData.get('p_tp')[0]/mData.get('p_pos')[0]
+            
+                ax3.plot(pTheta,pErr,label=self.name[i])
+                ax3.set_title('Pixel Error', fontsize=20)
+                ax3.set_ylabel('pixel error', fontsize=20)
+                ax3.set_xlabel('threshold', fontsize=20)
+            
+                ax4.plot(pFPR, pTPR,label=self.name[i])
+                ax4.set_ylim([0,1])
+                ax4.set_title('Pixel ROC', fontsize=20)
+                ax4.set_ylabel('true-positive rate', fontsize=20)
+                ax4.set_xlabel('false-positive rate', fontsize=20)
             
         ax1.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=2, borderaxespad=0., prop={'size':20})
         ax1.grid(); ax2.grid(); ax3.grid(); ax4.grid();
-        
-        return;
+        plt.show()
   
     
     """Displays three images: the raw data, the corresponding labels, and the predictions"""

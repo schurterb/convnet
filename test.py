@@ -12,12 +12,12 @@ import ConfigParser
 import argparse
 from analyzer import Analyzer
 from load_data import LoadData
+import matplotlib
+from pylab import ioff
 
-from pylab import *
-ion()
 
 def testprediction(config_file, pred_file=None, label_file=None, out_path=None):     
-
+    matplotlib.pylab.ion()
     config = ConfigParser.ConfigParser()
     config.read(config_file)
     
@@ -35,8 +35,7 @@ def testprediction(config_file, pred_file=None, label_file=None, out_path=None):
     res.analyze(-1, pred_file=pred_file, label_file=label_file, out_path=out_path)
     
     print "Displaying Results"
-    res.learning(1)
-    res.learning(10)
+    res.learning()
     res.performance()
     #res.display(0)
     
@@ -44,6 +43,7 @@ def testprediction(config_file, pred_file=None, label_file=None, out_path=None):
     
     
 def testall(directory, pred_file=None, label_file=None, out_path=None):
+    matplotlib.pylab.ion()
     folders = os.listdir(directory)
     config_file = directory+folders[0]+"/network.cfg"
     config = ConfigParser.ConfigParser()
@@ -70,8 +70,7 @@ def testall(directory, pred_file=None, label_file=None, out_path=None):
         res.analyze(-1, pred_file=pred_file, label_file=label_file, out_path=out_path)
         
     print "Displaying Results"
-    res.learning(1)
-    res.learning(10)
+    res.learning('MSE', 10)
     res.performance()
     
     raw_input("Press enter to close results")

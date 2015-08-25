@@ -413,12 +413,8 @@ class Trainer(object):
     def __store_status(self, error):
          
         weights_folder = self.log_folder + 'weights/' 
-        if (self.cost_func == 'rand'):
-            error_file = 'randIndex.csv'
-            trainer_folder = self.log_folder + 'trainer/malis/'
-        else:
-            error_file = 'learning_curve.csv'
-            trainer_folder = self.log_folder + 'trainer/basic/'
+        error_file = self.cost_func + '_learning.csv'
+        trainer_folder = self.log_folder + 'trainer/'+self.cost_func+'/'
             
         with open(self.log_folder + error_file, 'ab') as ef:
             fw = csv.writer(ef, delimiter=',')
