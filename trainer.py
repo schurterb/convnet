@@ -385,7 +385,7 @@ class Trainer(object):
                 self.negatives += (np.asarray(negative_samples, dtype='int32') ,)
                 self.epoch_length += (self.data_size[n]-self.seg)**3
                 
-            self.epoch_length = self.epoch_length/(self.log_interval*self.batch_size)
+            self.epoch_length = self.epoch_length/(self.log_interval*self.batch_size*(self.chunk_size**3))
     
     
     """

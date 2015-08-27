@@ -5,8 +5,9 @@ function evaluate_predictions(target_file, prediction_file, report_file, descrip
     addpath(genpath('matlab/seunglab/'));
     addpath(genpath('matlab/seunglab/segmentation/'));
 
-    initial_thresholds = 0.1:0.1:1.0;
-    min_step = 0.001;
+%    initial_thresholds = [0.0:0.01:0.1 0.1:0.1:0.9 0.9:0.01:1.0];
+    initial_thresholds = [0.0:0.01:1.0];
+    min_step = 0.01;
 %    min_step = 0.1;
     
     f = fopen([report_file '/errors_new.txt'], 'w');
@@ -127,7 +128,7 @@ evaluate_thresholds(target_file, prediction_file, thresholds, randOrPixel, min_s
     p_sqerr = sum(p_sqerr .* n_examples) / sum(n_examples);
     if(strcmp(randOrPixel,'rand'))
         prec = tp ./ (tp + fp);
-        rec = tp / pos;
+        rec = tp ./ pos;
         err = 2 * (prec .* rec) ./ (prec + rec);
         [best_err, idx] = max(err);
     else
@@ -253,7 +254,7 @@ function [r_err, r_tp, r_fp, r_pos, r_neg] = ...
 
         [ri, stats] = randIndex(compTrue, watershed);
 %        r_err = 1-ri;
-        r_err = ri
+        r_err = ri;
         r_tp = stats.truePos;
         r_fp = stats.falsePos;
 

@@ -119,7 +119,7 @@ If a groundtruth affinity graph and corresponding segmentation is available
 (and provided in the config), the predicted affinity graph can be tested against
 the groundtruth by calling the test script.
 ```
-python test.py -n testnet
+python test -n testnet
 ```
 The results of the test are stored in errors_new.mat and a plot of those results
 in errors_new.png. 
@@ -139,8 +139,8 @@ res.display('conv-8.25.5')
 ```
 
 * ShowResults.learning() displays the learning curve associated with the specified
-cost function (if it exists). It can also average over the designated number
-of values to produce a smoother image.
+cost function (if it exists). It can also average over in intervals the designated
+number of values across to produce a smoother plot.
 * ShowResults.performance() displays the performance metrics measured by the test script.
 * ShowResults.display() shows the predicted affinity graph along side the raw 
 image and target affinities.

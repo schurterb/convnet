@@ -185,7 +185,7 @@ class CNN(object):
     Make a prediction on a set of inputs
     TODO: Test this...
     """
-    def predict(self, x, results_folder = '', name = 'prediction', chunk_size = 10):
+    def predict(self, x, results_folder = '', name = 'prediction', chunk_size = 75):
         
         if not os.path.exists(results_folder):
             os.mkdir(results_folder)
@@ -194,23 +194,31 @@ class CNN(object):
             x = (x,)
         
         for i in range(len(x)):
-            xsub = x[i]
+            xsub = x[i] 
             out_size = xsub.shape[0] - self.sample_size + 1
-            f = h5py.File(results_folder + name + '_'+`i`+'.h5', 'w')
-            dset = f.create_dataset('main', (3, out_size, out_size, out_size), dtype='float32') 
+            rem_size = out_size%chunk_size     
             
-            for i in range(0, out_size/chunk_size):
-                for j in range(0, out_size/chunk_size):
-                    for k in range(0, out_size/chunk_size):
-                        dset[:, i*chunk_size:(i+1)*chunk_size, 
-                                j*chunk_size:(j+1)*chunk_size,
-                                k*chunk_size:(k+1)*chunk_size] = np.asarray(self.forward(xsub[i*chunk_size:(i+1)*chunk_size +self.sample_size -1,
-                                                                                                j*chunk_size:(j+1)*chunk_size +self.sample_size -1, 
-                                                                                                k*chunk_size:(k+1)*chunk_size +self.sample_size -1
-                                                                                                ].reshape((chunk_size +self.sample_size -1, 
-                                                                                                           chunk_size +self.sample_size -1, 
-                                                                                                           chunk_size +self.sample_size -1, 1))
-                                                                                           )).reshape((3, chunk_size, chunk_size, chunk_size))
+            f = h5py.File(results_folder + name + '_'+`i`+'.h5', 'w')
+            dset = f.create_dataset('main', (3, out_size, out_size, out_size), dtype='float32')
+
+            subsets = []
+            for i in range(0, out_size/chunk_size):  
+               subsets.append(chunk_size)
+            subsets.append(rem_size)
+            
+            for i in range(len(subsets)):
+                for j in range(len(subsets)):
+                    for k in range(len(subsets)):
+                        dset[:,sum(subsets[:i]):sum(subsets[:(i+1)]),
+                               sum(subsets[:j]):sum(subsets[:(j+1)]),
+                               sum(subsets[:k]):sum(subsets[:(k+1)])] \
+                               = np.asarray(self.forward(xsub[sum(subsets[:i]):sum(subsets[:(i+1)]) +self.sample_size -1,
+                                                              sum(subsets[:j]):sum(subsets[:(j+1)]) +self.sample_size -1, 
+                                                              sum(subsets[:k]):sum(subsets[:(k+1)]) +self.sample_size -1] \
+                                                              .reshape((subsets[i] +self.sample_size -1, 
+                                                                        subsets[j] +self.sample_size -1, 
+                                                                        subsets[k] +self.sample_size -1, 1))))[:,:,:,:,0]
+                          
             f.close()
 
  

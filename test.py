@@ -30,11 +30,18 @@ def testprediction(config_file, pred_file=None, label_file=None, out_path=None):
                     prediction_file = config.get('Testing', 'prediction_file')+'_0', 
                     learning_curve_file = 'learning_curve')           
     res.analyze(-1, pred_file=pred_file, label_file=label_file, out_path=out_path)
+    
+    return res
 
     
 def testall(directory, pred_file=None, label_file=None, out_path=None):
     folders = os.listdir(directory)
-    config_file = directory+folders[0]+"/network.cfg"
+    networks = []
+    for folder in folders:
+        if os.path.isfile(directory+folder+"/network.cfg") and os.path.exists(directory+folder+"/results"):
+            networks.append(folder)
+    
+    config_file = directory+networks[0]+"/network.cfg"
     config = ConfigParser.ConfigParser()
     config.read(config_file)
     
@@ -46,17 +53,19 @@ def testall(directory, pred_file=None, label_file=None, out_path=None):
     res = Analyzer(raw = test_data.get_data()[0], 
                    target = test_data.get_labels()[0])
                    
-    for folder in folders:
-        config_file = directory+folder+"/network.cfg"
+    for net in networks:
+        config_file = directory+net+"/network.cfg"
         config = ConfigParser.ConfigParser()
         config.read(config_file)
         
         res.add_results(results_folder = config.get('General','directory'),
-                        name = folder,
+                        name = net,
                         prediction_file = config.get('Testing', 'prediction_file')+'_0', 
                         learning_curve_file = 'learning_curve')
                            
         res.analyze(-1, pred_file=pred_file, label_file=label_file, out_path=out_path)
+        
+    return res
 
 
 

@@ -40,7 +40,7 @@ class Analyzer(object):
             
             return np.asarray(lr_curve)
         except:
-            print 'Warning: Unable to load learning curve.'
+            print 'Warning: Unable to load learning curve for',self.name[self.results_folder.index(results_folder)]
             return None
 
 
@@ -138,92 +138,184 @@ class Analyzer(object):
             
 
     """Plots the learning curves"""
-    def learning(self, lc_type = 'MSE', averaging_segment=1):
-        learning_curve = ()
-        curve_names = ()
-        for i in range(len(self.results_folder)):
-            lc = self.__load_learning(self.results_folder[i], lc_type)
-            if not (lc == None): 
-                learning_curve += (lc ,)
-                curve_names += (self.name[i] ,)
-            
-        num_curves = len(learning_curve)
-        n_figs = num_curves/7   #There can be seven unique auto-generated line colors
-        rem_curves = num_curves%7
+    def learning(self, lc_type = 'MSE', averaging_segment=1, networks=None):
         
-        for f in range(0, n_figs):
-            plt.figure()
-            for i in range(0, 7):
-                if learning_curve[f*7 + i].any():
-                    idx = learning_curve[f*7 + i].size/averaging_segment
-                    lc = np.mean(learning_curve[f*7 + i][0:idx*averaging_segment].reshape(idx, averaging_segment), 1)
-                    plt.plot(lc, label=curve_names[f*7 + i])
-            plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=2, borderaxespad=0., prop={'size':20})
-            plt.grid()
-        if(rem_curves > 0):
-            plt.figure()
-            for i in range(0, len(learning_curve[-rem_curves::])):
-                if learning_curve[n_figs*7 + i].any():
-                    idx = learning_curve[n_figs*7 + i].size/averaging_segment
-                    lc = np.mean(learning_curve[n_figs*7 + i][0:idx*averaging_segment].reshape(idx, averaging_segment), 1)
-                    plt.plot(lc, label=curve_names[n_figs*7 + i])
-            plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=2, borderaxespad=0., prop={'size':20})
-            plt.grid()
+        if networks:
+            learning_curve = ()
+            curve_names = ()
+            for net, c in networks:
+                i = self.name.index(net)
+                lc = self.__load_learning(self.results_folder[i], lc_type)
+                if not (lc == None): 
+                    learning_curve += (lc ,)
+                    curve_names += (self.name[i] ,)
+                
+            num_curves = len(learning_curve)
+            n_figs = num_curves/7   #There can be seven unique auto-generated line colors
+            rem_curves = num_curves%7
+            
+            for f in range(0, n_figs):
+                plt.figure()
+                for i in range(0, 7):
+                    if learning_curve[f*7 + i].any():
+                        idx = learning_curve[f*7 + i].size/averaging_segment
+                        c = networks[f*7 + i][1]
+                        lc = np.mean(learning_curve[f*7 + i][0:idx*averaging_segment].reshape(idx, averaging_segment), 1)
+                        plt.plot(np.arange(len(lc)), lc, c, linewidth=1.8, label=curve_names[f*7 + i])
+                plt.legend(bbox_to_anchor=(0.8, 0.89 , 1., .102), loc=2, borderaxespad=0., prop={'size':20})
+                plt.grid()
+            if(rem_curves > 0):
+                plt.figure()
+                for i in range(0, len(learning_curve[-rem_curves::])):
+                    if learning_curve[n_figs*7 + i].any():
+                        idx = learning_curve[n_figs*7 + i].size/averaging_segment
+                        c = networks[n_figs*7 + i][1]
+                        lc = np.mean(learning_curve[n_figs*7 + i][0:idx*averaging_segment].reshape(idx, averaging_segment), 1)
+                        plt.plot(np.arange(len(lc)), lc, c, linewidth=1.8, label=curve_names[n_figs*7 + i])
+                plt.legend(bbox_to_anchor=(0.8, 0.89 , 1., .102), loc=2, borderaxespad=0., prop={'size':20})
+                plt.grid()
+        else:
+            learning_curve = ()
+            curve_names = ()
+            for i in range(len(self.results_folder)):
+                lc = self.__load_learning(self.results_folder[i], lc_type)
+                if not (lc == None): 
+                    learning_curve += (lc ,)
+                    curve_names += (self.name[i] ,)
+                
+            num_curves = len(learning_curve)
+            n_figs = num_curves/7   #There can be seven unique auto-generated line colors
+            rem_curves = num_curves%7
+            
+            for f in range(0, n_figs):
+                plt.figure()
+                for i in range(0, 7):
+                    if learning_curve[f*7 + i].any():
+                        idx = learning_curve[f*7 + i].size/averaging_segment
+                        lc = np.mean(learning_curve[f*7 + i][0:idx*averaging_segment].reshape(idx, averaging_segment), 1)
+                        plt.plot(lc, linewidth=1.8, label=curve_names[f*7 + i])
+                plt.legend(bbox_to_anchor=(0.8, 0.89 , 1., .102), loc=2, borderaxespad=0., prop={'size':20})
+                plt.grid()
+            if(rem_curves > 0):
+                plt.figure()
+                for i in range(0, len(learning_curve[-rem_curves::])):
+                    if learning_curve[n_figs*7 + i].any():
+                        idx = learning_curve[n_figs*7 + i].size/averaging_segment
+                        lc = np.mean(learning_curve[n_figs*7 + i][0:idx*averaging_segment].reshape(idx, averaging_segment), 1)
+                        plt.plot(lc, linewidth=1.8, label=curve_names[n_figs*7 + i])
+                plt.legend(bbox_to_anchor=(0.8, 0.89 , 1., .102), loc=2, borderaxespad=0., prop={'size':20})
+                plt.grid()
+        plt.xlabel("averaged update interval")
+        plt.ylabel(lc_type+" cost")
         plt.show()
 
     
     
     """Plots the data from threshold_scan"""
-    def performance(self):
-        
+    def performance(self, networks=None):
         
         fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(nrows=2, ncols=2)       
         #fig.set_facecolor('white')
         
-        for i in range(len(self.results_folder)):
-            if os.path.isfile(self.results_folder[i] + 'errors_new.mat'):
-                mData = loadmat(self.results_folder[i] + 'errors_new.mat')
-            
-                #Show rand Index results
-                rTheta = mData.get('r_thresholds')[0]
-                rErr = mData.get('r_fscore')[0]
-                rFPR = mData.get('r_fp')[0]/mData.get('r_neg')[0]
-                rTPR = mData.get('r_tp')[0]/mData.get('r_pos')[0]
-            
-                ax1.plot(rTheta,rErr,label=self.name[i])
-                ax1.scatter(rTheta,rErr)
-                ax1.set_title('Rand F-Score', fontsize=20)
-                ax1.set_ylabel('f-score', fontsize=20)
-                ax1.set_xlabel('threshold', fontsize=20)
+        if networks:
+            for net, c in networks:
+                i = self.name.index(net)
+                if os.path.isfile(self.results_folder[i] + 'errors_new.mat'):
+                    mData = loadmat(self.results_folder[i] + 'errors_new.mat')
                 
-                ax2.plot(rFPR, rTPR,label=self.name[i])
-                ax2.scatter(rFPR, rTPR)
-                ax2.set_ylim([0,1])
-                ax2.set_xlim([0,1])
-                ax2.set_title('Rand ROC', fontsize=20)
-                ax2.set_ylabel('true-positive rate', fontsize=20)
-                ax2.set_xlabel('false-positive rate', fontsize=20)
+                    #Show rand Index results
+                    rTheta = mData.get('r_thresholds')[0]
+                    rErr = mData.get('r_fscore')[0]
+                    rFPR = mData.get('r_fp')[0]/mData.get('r_neg')[0]
+                    rTPR = mData.get('r_tp')[0]/mData.get('r_pos')[0]
                 
-                #Show pixel error results
-                pTheta = mData.get('p_thresholds')[0]
-                pErr = mData.get('p_err')[0]
-                pFPR = mData.get('p_fp')[0]/mData.get('p_neg')[0]
-                pTPR = mData.get('p_tp')[0]/mData.get('p_pos')[0]
-            
-                ax3.plot(pTheta,pErr,label=self.name[i])
-                ax3.scatter(pTheta,pErr)
-                ax3.set_title('Pixel Error', fontsize=20)
-                ax3.set_ylabel('pixel error', fontsize=20)
-                ax3.set_xlabel('threshold', fontsize=20)
-            
-                ax4.plot(pFPR, pTPR,label=self.name[i])
-                ax4.scatter(pFPR, pTPR)
-                ax4.set_ylim([0,1])
-                ax4.set_xlim([0,1])
-                ax4.set_title('Pixel ROC', fontsize=20)
-                ax4.set_ylabel('true-positive rate', fontsize=20)
-                ax4.set_xlabel('false-positive rate', fontsize=20)
-            
+                    ax1.plot(rTheta,rErr, c, linewidth=2, label=self.name[i])
+                    ax1.scatter(rTheta,rErr)
+                    ax1.set_title('Rand F-Score', fontsize=20)
+                    ax1.set_ylabel('f-score', fontsize=20)
+                    ax1.set_xlabel('threshold', fontsize=20)
+                                    
+                    ax2.plot(rFPR, rTPR, c, linewidth=2, label=self.name[i])
+                    ax2.scatter(rFPR, rTPR)
+                    ax2.set_title('Rand ROC', fontsize=20)
+                    ax2.set_ylabel('true-positive rate', fontsize=20)
+                    ax2.set_xlabel('false-positive rate', fontsize=20)
+                    
+                    #Show pixel error results
+                    pTheta = mData.get('p_thresholds')[0]
+                    pErr = mData.get('p_err')[0]
+                    pFPR = mData.get('p_fp')[0]/mData.get('p_neg')[0]
+                    pTPR = mData.get('p_tp')[0]/mData.get('p_pos')[0]
+                
+                    ax3.plot(pTheta,pErr, c, linewidth=2, label=self.name[i])
+                    ax3.scatter(pTheta,pErr)
+                    ax3.set_title('Pixel Error', fontsize=20)
+                    ax3.set_ylabel('pixel error', fontsize=20)
+                    ax3.set_xlabel('threshold', fontsize=20)
+                
+                    ax4.plot(pFPR, pTPR, c, linewidth=2, label=self.name[i])
+                    ax4.scatter(pFPR, pTPR)
+                    ax4.set_title('Pixel ROC', fontsize=20)
+                    ax4.set_ylabel('true-positive rate', fontsize=20)
+                    ax4.set_xlabel('false-positive rate', fontsize=20)
+                else:
+                    print "Test results not avialable for",net
+        else:
+            for i in range(len(self.results_folder)):
+                if os.path.isfile(self.results_folder[i] + 'errors_new.mat'):
+                    mData = loadmat(self.results_folder[i] + 'errors_new.mat')
+                
+                    #Show rand Index results
+                    rTheta = mData.get('r_thresholds')[0]
+                    rErr = mData.get('r_fscore')[0]
+                    rFPR = mData.get('r_fp')[0]/mData.get('r_neg')[0]
+                    rTPR = mData.get('r_tp')[0]/mData.get('r_pos')[0]
+                
+                    ax1.plot(rTheta,rErr, linewidth=2, label=self.name[i])
+                    ax1.scatter(rTheta,rErr)
+                    ax1.set_title('Rand F-Score', fontsize=20)
+                    ax1.set_ylabel('f-score', fontsize=20)
+                    ax1.set_xlabel('threshold', fontsize=20)
+                                    
+                    ax2.plot(rFPR, rTPR, linewidth=2, label=self.name[i])
+                    ax2.scatter(rFPR, rTPR)
+                    ax2.set_title('Rand ROC', fontsize=20)
+                    ax2.set_ylabel('true-positive rate', fontsize=20)
+                    ax2.set_xlabel('false-positive rate', fontsize=20)
+                    
+                    #Show pixel error results
+                    pTheta = mData.get('p_thresholds')[0]
+                    pErr = mData.get('p_err')[0]
+                    pFPR = mData.get('p_fp')[0]/mData.get('p_neg')[0]
+                    pTPR = mData.get('p_tp')[0]/mData.get('p_pos')[0]
+                
+                    ax3.plot(pTheta,pErr, linewidth=2, label=self.name[i])
+                    ax3.scatter(pTheta,pErr)
+                    ax3.set_title('Pixel Error', fontsize=20)
+                    ax3.set_ylabel('pixel error', fontsize=20)
+                    ax3.set_xlabel('threshold', fontsize=20)
+                
+                    ax4.plot(pFPR, pTPR, linewidth=2, label=self.name[i])
+                    ax4.scatter(pFPR, pTPR)
+                    ax4.set_title('Pixel ROC', fontsize=20)
+                    ax4.set_ylabel('true-positive rate', fontsize=20)
+                    ax4.set_xlabel('false-positive rate', fontsize=20)
+                else:
+                    print "Test results not avialable for",self.name[i]
+        
+        
+        #ax1.set_ylim([0,1])
+        ax1.set_xlim([0,1])   
+        ax2.set_ylim([0,1])
+        ax2.set_xlim([0,1]) 
+        ax3.set_ylim([0,1])
+        ax3.set_xlim([0,1]) 
+        ax4.set_ylim([0,1])
+        ax4.set_xlim([0,1])      
+        
+        x = np.arange(0.0, 1.1, 0.1)
+        ax2.plot(x, x, '--k', linewidth=1.5)
+        ax4.plot(x, x, '--k', linewidth=1.5)
         ax1.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=2, borderaxespad=0., prop={'size':20})
         ax1.grid(); ax2.grid(); ax3.grid(); ax4.grid();
         plt.show()
@@ -237,7 +329,7 @@ class Analyzer(object):
             for res in range(len(self.name)):
                 crop = (self.target.shape[-1] - self.prediction[res].shape[-1])/2
                 if(crop > max_crop):
-                    max_crop = crop        
+                    max_crop = crop +1
 
             if (type(result_name) == str):
                 res = self.name.index(result_name)
@@ -245,42 +337,44 @@ class Analyzer(object):
                 res = result_name
             else:
                 print 'Invalid Entry'
-                return;
-                
-            fig = plt.figure(figsize=(20,10))
+                return;                
+            
+            depthInit = 0 
+            fig = plt.figure()
             fig.set_facecolor('white')
-            ax1 = fig.add_subplot(1,3,1)
-            ax2 = fig.add_subplot(1,3,2)
-            ax3 = fig.add_subplot(1,3,3)
-            fig.subplots_adjust(left=0.25, bottom=0.25)
-            depth0 = 0
+            ax1,ax2,ax3 = fig.add_subplot(1,3,1),fig.add_subplot(1,3,2),fig.add_subplot(1,3,3)
+            fig.subplots_adjust(left=0.2, bottom=0.25)
             
-            crop = (self.target.shape[-1] - self.prediction[res].shape[-1])/2            
+            crop = (self.target.shape[-1] - self.prediction[res].shape[-1])/2
+            crop = max_crop - crop
+            im_size = self.target.shape[-1] - (2*max_crop)
             
-            #All these images are in gray-scale
-            plt.gray()
-            im1 = ax1.imshow(self.raw[0,max_crop:-max_crop,max_crop:-max_crop])
-            ax1.set_title('raw image', fontsize = 20)
+            #Image is grayscale
+            im1 = ax1.imshow(self.raw[max_crop+depthInit,max_crop:-max_crop,max_crop:-max_crop],cmap=cm.Greys_r)
+            ax1.set_title('Raw Image')
+        
+            im2 = ax2.imshow(self.target[max_crop+depthInit,max_crop:-max_crop,max_crop:-max_crop,:])
+            ax2.set_title('Groundtruth')
+        
+            im3 = ax3.imshow(self.prediction[res][crop+depthInit,crop:-crop,crop:-crop,crop:-crop])
+            ax3.set_title('Predictions')
             
-            im2 = ax2.imshow(self.target[0,0,max_crop:-max_crop,max_crop:-max_crop])
-            ax2.set_title('groundtruth', fontsize = 20)
-            
-            im3 = ax3.imshow(self.prediction[res][0,max_crop-crop,:,:])
-            ax3.set_title('prediction', fontsize = 20)     
-            
-            axcolor = 'lightgoldenrodyellow'
-            axdepth = fig.add_axes([0.25, 0.3, 0.65, 0.03], axisbg=axcolor)
-            depth = Slider(axdepth, 'Min', 0, self.prediction[res].shape[-1]-max_crop, valinit=depth0, valfmt='%0.0f')
+            axdepth = fig.add_axes([0.25, 0.3, 0.65, 0.03], axisbg='white')
+            #axzoom  = fig.add_axes([0.25, 0.15, 0.65, 0.03], axisbg=axcolor)
+        
+            depth = Slider(axdepth, 'Min', 0, im_size, valinit=depthInit,valfmt='%0.0f')
+            #zoom = Slider(axmax, 'Max', 0, 250, valinit=max0)
             
             def update(val):
-                zlayer = int(depth.val)
-                im1.set_data(self.raw[max_crop+zlayer,max_crop:-max_crop,max_crop:-max_crop])
-                im2.set_data(self.target[max_crop+zlayer,max_crop:-max_crop,max_crop:-max_crop,:])
-                im3.set_data(self.prediction[res][max_crop-crop+zlayer,:,:,:])
+                z = int(depth.val)
+                im1.set_data(self.raw[max_crop+z,max_crop:-max_crop,max_crop:-max_crop])
+                #im[:,:,:]=label[z,:,:,0]
+                im2.set_data(self.target[max_crop+z,max_crop:-max_crop,max_crop:-max_crop,:])
+                #im_[:,:,:]=pred[z,:,:,0]
+                im3.set_data(self.prediction[res][crop+z,crop:-crop,crop:-crop,crop:-crop])
                 fig.canvas.draw()
-                
             fig.suptitle(self.name[res], fontsize = 20)
-            depth.on_changed(update)        
+            depth.on_changed(update)
             plt.show()
         else:
             if (type(result_name) == str):
@@ -300,7 +394,6 @@ class Analyzer(object):
             ax1,ax2,ax3 = fig.add_subplot(1,3,1),fig.add_subplot(1,3,2),fig.add_subplot(1,3,3)
             
             fig.subplots_adjust(left=0.2, bottom=0.25)
-            depth0 = 0
         
             #Image is grayscale
             im1 = ax1.imshow(self.raw[crop+depthInit,crop:-crop,crop:-crop],cmap=cm.Greys_r)
@@ -315,7 +408,7 @@ class Analyzer(object):
             axdepth = fig.add_axes([0.25, 0.3, 0.65, 0.03], axisbg='white')
             #axzoom  = fig.add_axes([0.25, 0.15, 0.65, 0.03], axisbg=axcolor)
         
-            depth = Slider(axdepth, 'Min', 0, im_size, valinit=depth0,valfmt='%0.0f')
+            depth = Slider(axdepth, 'Min', 0, im_size, valinit=depthInit,valfmt='%0.0f')
             #zoom = Slider(axmax, 'Max', 0, 250, valinit=max0)
             
             def update(val):
@@ -326,6 +419,7 @@ class Analyzer(object):
                 #im_[:,:,:]=pred[z,:,:,0]
                 im3.set_data(self.prediction[res][z,:,:,:])
                 fig.canvas.draw()
+            fig.suptitle(self.name[res], fontsize = 20)
             depth.on_changed(update)
             plt.show()
 

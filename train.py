@@ -6,7 +6,7 @@ Created on Thu Jun 25 05:42:17 2015
 
 Train a network as defined by a provided config file
 """
-
+import os
 import time
 import ConfigParser
 import argparse
@@ -41,7 +41,7 @@ def trainnetwork(config_file):
                              
     starttime=time.clock()
     #Create the network and trainer    
-    if config.getboolean('Network', 'load_weights'):
+    if os.path.exists(config.get('General', 'directory')+config.get('Network', 'weights_folder')):
         print 'Loading Network'
         network = CNN(weights_folder = config.get('General', 'directory')+config.get('Network', 'weights_folder'),
                       activation = config.get('Network', 'activation'))
@@ -87,7 +87,7 @@ def trainnetwork(config_file):
     starttime = time.clock()
     #Train the network
     print 'Training...\n'
-    train_error, res = network_trainer.train(config.getint('Training', 'num_epochs'), 
+    train_error = network_trainer.train(config.getint('Training', 'num_epochs'), 
                                         config.getboolean('Training', 'early_stop'), 
                                         config.getboolean('Training', 'print_updates'))
     total_time = time.clock() - starttime     
@@ -95,7 +95,7 @@ def trainnetwork(config_file):
     print "Total Time     =",total_time,"seconds"                   
 
     training_data.close()
-    return res
+    return train_error
     
 
 if __name__ == '__main__':

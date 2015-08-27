@@ -7,6 +7,8 @@ Created on Thu Jun 25 05:42:17 2015
 Training a network with ADAM and no mini-batches
 """
 
+import os
+import glob
 import time
 import ConfigParser
 import argparse
@@ -32,9 +34,13 @@ def makeprediction(config_file, data_file=None, out_path=None, out_file=None):
 
     starttime=time.clock()
     print '\nInitializing Network'
-    network = CNN(weights_folder = config.get('General', 'directory')+config.get('Network', 'weights_folder'),
-                  activation = config.get('Network', 'activation'),
-                  cost_func = config.get('Network', 'cost_func'))
+    if os.path.exists(config.get('General', 'directory')+config.get('Network', 'weights_folder')):
+        network = CNN(weights_folder = config.get('General', 'directory')+config.get('Network', 'weights_folder'),
+                      activation = config.get('Network', 'activation'),
+                      cost_func = config.get('Network', 'cost_func'))
+    else:
+        print 'Error: Weights folder does not exist. Could not initialize network.'
+        return;
     #------------------------------------------------------------------------------
     
     print 'Opening Data Files'
@@ -72,11 +78,23 @@ def makeprediction(config_file, data_file=None, out_path=None, out_file=None):
         
     test_data.close()
     
+    
+def predictall(directory, data_file=None, out_path=None, out_file=None):
+    folders = os.listdir(directory)
+    networks = []
+    for folder in folders:
+        if os.path.isfile(directory+folder+"/network.cfg") and not glob.glob(directory+folder+"/results/*.h5"):
+            networks.append(folder)
+
+    for net in networks:
+        makeprediction(directory+net+"/network.cfg", data_file, out_path, out_file)
+    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", help="Path to network config file. Default is current directory.")
     parser.add_argument("-n", help="Name of network folder in networks directory - overrides -c flag.")
+    parser.add_argument("-all", help="Makes predictions with all networks in the given directory that do not yet have predictions.")
     parser.add_argument("--data", help="Path to data to make predictions on - overrides [Testing Data] section in config file.")
     parser.add_argument("--outpath", help="Path to folder where prediction should be stored - overrides [Testing] section in config file.")
     parser.add_argument("--outfile", help="Name of file containing prediction - overrides [Testing] section in config file.")
@@ -90,5 +108,8 @@ if __name__ == '__main__':
     if args.n:
         config_file = "networks/" + args.n + "/network.cfg"
         
-    makeprediction(config_file, args.data, args.outpath, args.outfile)
+    if args.all:
+        predictall(args.all, args.data, args.outpath, args.outfile)
+    else:
+        makeprediction(config_file, args.data, args.outpath, args.outfile)
     
