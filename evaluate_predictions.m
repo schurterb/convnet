@@ -5,10 +5,12 @@ function evaluate_predictions(target_file, prediction_file, report_file, descrip
     addpath(genpath('matlab/seunglab/'));
     addpath(genpath('matlab/seunglab/segmentation/'));
 
-%    initial_thresholds = [0.0:0.01:0.1 0.1:0.1:0.9 0.9:0.01:1.0];
-    initial_thresholds = [0.0:0.2:1.0];
-    min_step = 0.001;
-%    min_step = 0.1;
+%    initial_thresholds = [0.99960 0.99990 0.99992 0.99994 0.99996 0.99999];
+%    min_step = 1.0;
+    initial_thresholds = [0.001 0.4 0.8 0.9 0.98 0.99 0.993 0.997 0.999 0.9992 0.9994 0.9996 0.9999 0.99992 0.99994 0.99996 0.99997 0.99998 0.99999 0.99999 0.999995 0.999999];
+    min_step = 1.0;
+%    initial_thresholds = [0.0:0.2:1.0];
+%    min_step = 0.001;
     
     f = fopen([report_file '/errors_new.txt'], 'w');
     saveAndPrint(f, 'Description:\n%s\n\n', description);
