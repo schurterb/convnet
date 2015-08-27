@@ -6,8 +6,8 @@ function evaluate_predictions(target_file, prediction_file, report_file, descrip
     addpath(genpath('matlab/seunglab/segmentation/'));
 
 %    initial_thresholds = [0.0:0.01:0.1 0.1:0.1:0.9 0.9:0.01:1.0];
-    initial_thresholds = [0.0:0.01:1.0];
-    min_step = 0.01;
+    initial_thresholds = [0.0:0.2:1.0];
+    min_step = 0.001;
 %    min_step = 0.1;
     
     f = fopen([report_file '/errors_new.txt'], 'w');
@@ -253,8 +253,8 @@ function [r_err, r_tp, r_fp, r_pos, r_neg] = ...
         watershed = markerWatershed(affEst, nHood, compEst);
 
         [ri, stats] = randIndex(compTrue, watershed);
-%        r_err = 1-ri;
-        r_err = ri;
+        r_err = 1-ri;
+%        r_err = ri;
         r_tp = stats.truePos;
         r_fp = stats.falsePos;
 

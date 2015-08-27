@@ -18,18 +18,23 @@ from cnn import CNN
 from load_data import LoadData
 
 
-def makeprediction(config_file, data_file=None, out_path=None, out_file=None):
+def makeprediction(config_file, data_file=None, out_path=None, out_file=None, gpu=None):
     
     #Open configuration file for this network
     config = ConfigParser.ConfigParser()
     config.read(config_file)
     
     #Set the device on which to perform these computations
-    device = config.get('General', 'device')
-    theano.sandbox.cuda.use(device)
-    if (device != 'cpu'):
+    if gpu:
+        theano.sandbox.cuda.use(gpu)
         theano.config.nvcc.flags='-use=fast=math'
         theano.config.allow_gc=False
+    else:
+        device = config.get('General', 'device')
+        theano.sandbox.cuda.use(device)
+        if (device != 'cpu'):
+            theano.config.nvcc.flags='-use=fast=math'
+            theano.config.allow_gc=False
     #------------------------------------------------------------------------------
 
     starttime=time.clock()
@@ -39,7 +44,7 @@ def makeprediction(config_file, data_file=None, out_path=None, out_file=None):
                       activation = config.get('Network', 'activation'),
                       cost_func = config.get('Network', 'cost_func'))
     else:
-        print 'Error: Weights folder does not exist. Could not initialize network.'
+        print 'Error: Weights folder does not exist. Could not initialize network'
         return;
     #------------------------------------------------------------------------------
     
@@ -79,15 +84,16 @@ def makeprediction(config_file, data_file=None, out_path=None, out_file=None):
     test_data.close()
     
     
-def predictall(directory, data_file=None, out_path=None, out_file=None):
+def predictall(directory, data_file=None, out_path=None, out_file=None, gpu=None):
     folders = os.listdir(directory)
     networks = []
     for folder in folders:
         if os.path.isfile(directory+folder+"/network.cfg") and not glob.glob(directory+folder+"/results/*.h5"):
             networks.append(folder)
-
+    
+    print "Making predictions for the following networks:\n",networks
     for net in networks:
-        makeprediction(directory+net+"/network.cfg", data_file, out_path, out_file)
+        makeprediction(directory+net+"/network.cfg", data_file, out_path, out_file, gpu)
     
 
 if __name__ == '__main__':
@@ -98,6 +104,7 @@ if __name__ == '__main__':
     parser.add_argument("--data", help="Path to data to make predictions on - overrides [Testing Data] section in config file.")
     parser.add_argument("--outpath", help="Path to folder where prediction should be stored - overrides [Testing] section in config file.")
     parser.add_argument("--outfile", help="Name of file containing prediction - overrides [Testing] section in config file.")
+    parser.add_argument("--gpu", help="Select gpu to use. Useful when makeing predictions for all networks in a directory.")
     
     args = parser.parse_args()
     if args.c:
@@ -109,7 +116,7 @@ if __name__ == '__main__':
         config_file = "networks/" + args.n + "/network.cfg"
         
     if args.all:
-        predictall(args.all, args.data, args.outpath, args.outfile)
+        predictall(args.all, args.data, args.outpath, args.outfile, args.gpu)
     else:
-        makeprediction(config_file, args.data, args.outpath, args.outfile)
+        makeprediction(config_file, args.data, args.outpath, args.outfile, args.gpu)
     

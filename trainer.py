@@ -455,8 +455,8 @@ class Trainer(object):
     Log the current status of the trainer and the network
     """
     def __log_trainer(self, epoch, error, train_time):
-        start_cost = error[epoch*self.epoch_length]
-        end_cost = error[(epoch+1)*self.epoch_length -1]
+        start_cost = error[0]
+        end_cost = error[-1]
         trainer_status  = "\n-- Status at epoch: "+`epoch`+" --\n"
         trainer_status += "Change in average cost: "+`start_cost`+" -> "+`end_cost`+"\n"
         diff = start_cost - end_cost

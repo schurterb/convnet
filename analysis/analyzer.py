@@ -222,6 +222,8 @@ class Analyzer(object):
                 i = self.name.index(net)
                 if os.path.isfile(self.results_folder[i] + 'errors_new.mat'):
                     mData = loadmat(self.results_folder[i] + 'errors_new.mat')
+                    min_affinity = self.prediction[i].min()
+                    max_affinity = self.prediction[i].max()
                 
                     #Show rand Index results
                     rTheta = mData.get('r_thresholds')[0]
@@ -229,13 +231,13 @@ class Analyzer(object):
                     rFPR = mData.get('r_fp')[0]/mData.get('r_neg')[0]
                     rTPR = mData.get('r_tp')[0]/mData.get('r_pos')[0]
                 
-                    ax1.plot(rTheta,rErr, c, linewidth=2, label=self.name[i])
+                    ax1.plot(rTheta,rErr, c, linewidth=2, label=self.name[i]+" (range: "+"{0:.5f}".formate(min_affinity)+" - "+`max_affinity`+")")
                     ax1.scatter(rTheta,rErr)
                     ax1.set_title('Rand F-Score', fontsize=20)
                     ax1.set_ylabel('f-score', fontsize=20)
                     ax1.set_xlabel('threshold', fontsize=20)
                                     
-                    ax2.plot(rFPR, rTPR, c, linewidth=2, label=self.name[i])
+                    ax2.plot(rFPR, rTPR, c, linewidth=2, label=self.name[i]+" (range: "+"{0:.5f}".formate(min_affinity)+" - "+`max_affinity`+")")
                     ax2.scatter(rFPR, rTPR)
                     ax2.set_title('Rand ROC', fontsize=20)
                     ax2.set_ylabel('true-positive rate', fontsize=20)
@@ -247,13 +249,13 @@ class Analyzer(object):
                     pFPR = mData.get('p_fp')[0]/mData.get('p_neg')[0]
                     pTPR = mData.get('p_tp')[0]/mData.get('p_pos')[0]
                 
-                    ax3.plot(pTheta,pErr, c, linewidth=2, label=self.name[i])
+                    ax3.plot(pTheta,pErr, c, linewidth=2, label=self.name[i]+" (range: "+"{0:.5f}".formate(min_affinity)+" - "+`max_affinity`+")")
                     ax3.scatter(pTheta,pErr)
                     ax3.set_title('Pixel Error', fontsize=20)
                     ax3.set_ylabel('pixel error', fontsize=20)
                     ax3.set_xlabel('threshold', fontsize=20)
                 
-                    ax4.plot(pFPR, pTPR, c, linewidth=2, label=self.name[i])
+                    ax4.plot(pFPR, pTPR, c, linewidth=2, label=self.name[i]+" (range: "+"{0:.5f}".formate(min_affinity)+" - "+`max_affinity`+")")
                     ax4.scatter(pFPR, pTPR)
                     ax4.set_title('Pixel ROC', fontsize=20)
                     ax4.set_ylabel('true-positive rate', fontsize=20)
@@ -264,6 +266,8 @@ class Analyzer(object):
             for i in range(len(self.results_folder)):
                 if os.path.isfile(self.results_folder[i] + 'errors_new.mat'):
                     mData = loadmat(self.results_folder[i] + 'errors_new.mat')
+                    min_affinity = self.prediction[i].min()
+                    max_affinity = self.prediction[i].max()
                 
                     #Show rand Index results
                     rTheta = mData.get('r_thresholds')[0]
@@ -271,13 +275,13 @@ class Analyzer(object):
                     rFPR = mData.get('r_fp')[0]/mData.get('r_neg')[0]
                     rTPR = mData.get('r_tp')[0]/mData.get('r_pos')[0]
                 
-                    ax1.plot(rTheta,rErr, linewidth=2, label=self.name[i])
+                    ax1.plot(rTheta,rErr, linewidth=2, label=self.name[i]+" (range: "+"{0:.5f}".formate(min_affinity)+" - "+`max_affinity`+")")
                     ax1.scatter(rTheta,rErr)
                     ax1.set_title('Rand F-Score', fontsize=20)
                     ax1.set_ylabel('f-score', fontsize=20)
                     ax1.set_xlabel('threshold', fontsize=20)
                                     
-                    ax2.plot(rFPR, rTPR, linewidth=2, label=self.name[i])
+                    ax2.plot(rFPR, rTPR, linewidth=2, label=self.name[i]+" (range: "+"{0:.5f}".formate(min_affinity)+" - "+`max_affinity`+")")
                     ax2.scatter(rFPR, rTPR)
                     ax2.set_title('Rand ROC', fontsize=20)
                     ax2.set_ylabel('true-positive rate', fontsize=20)
@@ -289,13 +293,13 @@ class Analyzer(object):
                     pFPR = mData.get('p_fp')[0]/mData.get('p_neg')[0]
                     pTPR = mData.get('p_tp')[0]/mData.get('p_pos')[0]
                 
-                    ax3.plot(pTheta,pErr, linewidth=2, label=self.name[i])
+                    ax3.plot(pTheta,pErr, linewidth=2, label=self.name[i]+" (range: "+"{0:.5f}".formate(min_affinity)+" - "+`max_affinity`+")")
                     ax3.scatter(pTheta,pErr)
                     ax3.set_title('Pixel Error', fontsize=20)
                     ax3.set_ylabel('pixel error', fontsize=20)
                     ax3.set_xlabel('threshold', fontsize=20)
                 
-                    ax4.plot(pFPR, pTPR, linewidth=2, label=self.name[i])
+                    ax4.plot(pFPR, pTPR, linewidth=2, label=self.name[i]+" (range: "+"{0:.5f}".formate(min_affinity)+" - "+`max_affinity`+")")
                     ax4.scatter(pFPR, pTPR)
                     ax4.set_title('Pixel ROC', fontsize=20)
                     ax4.set_ylabel('true-positive rate', fontsize=20)
@@ -316,7 +320,7 @@ class Analyzer(object):
         x = np.arange(0.0, 1.1, 0.1)
         ax2.plot(x, x, '--k', linewidth=1.5)
         ax4.plot(x, x, '--k', linewidth=1.5)
-        ax1.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=2, borderaxespad=0., prop={'size':20})
+        ax2.legend(bbox_to_anchor=(1., 1.02, 1., .102), loc=2, borderaxespad=0., prop={'size':20})
         ax1.grid(); ax2.grid(); ax3.grid(); ax4.grid();
         plt.show()
   
