@@ -50,7 +50,7 @@ def trainnetwork(config_file):
         network_trainer = Trainer(network, training_data.get_data(), training_data.get_labels(), training_data.get_segments(),
                                   chunk_size = config.getint('Training', 'chunk_size'),  
                                   batch_size = config.getint('Training', 'batch_size'),
-                                  cost_func = config.get('Network', 'cost_func'),
+                                  cost_func = config.get('Training', 'cost_func'),
                                   learning_method = config.get('Training', 'learning_method'),
                                   learning_rate = config.getfloat('Training', 'learning_rate'), 
                                   beta1 = config.getfloat('Training', 'beta1'),
@@ -64,14 +64,13 @@ def trainnetwork(config_file):
         network = CNN(num_layers = config.getint('Network', 'num_layers'), 
                       num_filters = config.getint('Network', 'num_filters'), 
                       filter_size = config.getint('Network', 'filter_size'), 
-                      activation = config.get('Network', 'activation'),
-                      cost_func = config.get('Network', 'cost_func'))
+                      activation = config.get('Network', 'activation'))
                       
         print 'Initializing Trainer'             
         network_trainer = Trainer(network, training_data.get_data(), training_data.get_labels(), training_data.get_segments(),
                                   chunk_size = config.getint('Training', 'chunk_size'),  
                                   batch_size = config.getint('Training', 'batch_size'),
-                                  cost_func = config.get('Network', 'cost_func'),
+                                  cost_func = config.get('Training', 'cost_func'),
                                   learning_method = config.get('Training', 'learning_method'),
                                   learning_rate = config.getfloat('Training', 'learning_rate'), 
                                   beta1 = config.getfloat('Training', 'beta1'),

@@ -5,10 +5,10 @@ function evaluate_predictions(target_file, prediction_file, report_file, descrip
     addpath(genpath('matlab/seunglab/'));
     addpath(genpath('matlab/seunglab/segmentation/'));
 
-%    initial_thresholds = [0.99960 0.99990 0.99992 0.99994 0.99996 0.99999];
-%    min_step = 1.0;
-    initial_thresholds = [0.001 0.4 0.8 0.9 0.98 0.99 0.993 0.997 0.999 0.9992 0.9994 0.9996 0.9999 0.99992 0.99994 0.99996 0.99997 0.99998 0.99999 0.99999 0.999995 0.999999];
+    initial_thresholds = [0.0:0.2:0.8 0.9:0.005:0.99 0.99:0.001:0.999 0.999:0.0001:0.9999 0.9999:0.00001:0.99999 0.99999:0.000001:0.999999 0.999999:0.0000001:1.0];
     min_step = 1.0;
+%    initial_thresholds = [0.001 0.4 0.8 0.9 0.98 0.99 0.993 0.997 0.999 0.9992 0.9994 0.9996 0.9997 0.9998 0.9999 0.99992 0.99994 0.99996 0.99997 0.99998 0.99999 0.99999 0.999995 0.999999];
+%    min_step = 1.0;
 %    initial_thresholds = [0.0:0.2:1.0];
 %    min_step = 0.001;
     
