@@ -41,8 +41,7 @@ def makeprediction(config_file, data_file=None, out_path=None, out_file=None, gp
     print '\nInitializing Network'
     if os.path.exists(config.get('General', 'directory')+config.get('Network', 'weights_folder')):
         network = CNN(weights_folder = config.get('General', 'directory')+config.get('Network', 'weights_folder'),
-                      activation = config.get('Network', 'activation'),
-                      cost_func = config.get('Network', 'cost_func'))
+                      activation = config.get('Network', 'activation'))
     else:
         print 'Error: Weights folder does not exist. Could not initialize network'
         return;

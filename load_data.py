@@ -38,17 +38,23 @@ class LoadData(object):
                         self.seg_file += (h5py.File(folder + self.seg_file_name, 'r') ,)
                         self.z += (self.seg_file[-1]['main'] ,)
             else:
+                self.data_file = ()
+                self.x = ()
                 if self.data_file_name:
-                    self.data_file = (h5py.File(self.folder + self.data_file_name, 'r') ,)
-                    self.x = (self.data_file[-1]['main'] ,)
+                    self.data_file += (h5py.File(self.folder + self.data_file_name, 'r') ,)
+                    self.x += (self.data_file[-1]['main'] ,)
                 
+                self.label_file = ()
+                self.y = ()
                 if self.label_file_name:
-                    self.label_file = (h5py.File(self.folder + self.label_file_name, 'r') ,)
-                    self.y = (self.label_file[-1]['main'] ,)
-                
+                    self.label_file += (h5py.File(self.folder + self.label_file_name, 'r') ,)
+                    self.y += (self.label_file[-1]['main'] ,)
+                        
+                self.seg_file = ()
+                self.z = ()
                 if self.seg_file_name:
-                    self.seg_file = (h5py.File(self.folder + self.seg_file_name, 'r') ,)
-                    self.z = (self.seg_file[-1]['main'] ,)
+                    self.seg_file += (h5py.File(self.folder + self.seg_file_name, 'r') ,)
+                    self.z += (self.seg_file[-1]['main'] ,)
             
         else:   
             raise TypeError("Unsupported file type")
@@ -85,10 +91,12 @@ class LoadData(object):
     Close the data and label files
     In the case of hdf5 files, the data will no longer be accessible after this.
     """
-    def close(self):
-        for dfile, lfile, sfile in zip(self.data_file, self.label_file, self.seg_file):
+    def close(self):        
+        for dfile in self.data_file:
             dfile.close()
+        for lfile in self.label_file:
             lfile.close()
+        for sfile in self.seg_file:
             sfile.close()
         
     
