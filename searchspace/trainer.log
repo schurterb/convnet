@@ -1,0 +1,36 @@
+INFO:trainer:
+### Convolutional Network Trainer Log ###
+
+Network Parameters
+num layers = 16
+num filters = 50
+filter size = 3
+activation = 'relu'
+
+Trainer Parameters
+cost function = 'MSE'
+learning method = ADAM
+batch size = 100
+learning rate = 0.0001
+beta 1 = 0.9
+beta 2 = 0.9
+damping term = 1e-08
+
+
+ERROR:theano.gof.opt:Optimization failure due to: local_gpu_incsubtensor
+ERROR:theano.gof.opt:TRACEBACK:
+ERROR:theano.gof.opt:Traceback (most recent call last):
+  File "/groups/turaga/home/schurterb/.local/lib/python2.7/site-packages/Theano-0.7.0-py2.7.egg/theano/gof/opt.py", line 1491, in process_node
+    replacements = lopt.transform(node)
+  File "/groups/turaga/home/schurterb/.local/lib/python2.7/site-packages/Theano-0.7.0-py2.7.egg/theano/sandbox/cuda/opt.py", line 1075, in local_gpu_incsubtensor
+    as_cuda_ndarray_variable(y),
+  File "/groups/turaga/home/schurterb/.local/lib/python2.7/site-packages/Theano-0.7.0-py2.7.egg/theano/sandbox/cuda/basic_ops.py", line 47, in as_cuda_ndarray_variable
+    return gpu_from_host(tensor_x)
+  File "/groups/turaga/home/schurterb/.local/lib/python2.7/site-packages/Theano-0.7.0-py2.7.egg/theano/gof/op.py", line 508, in __call__
+    node = self.make_node(*inputs, **kwargs)
+  File "/groups/turaga/home/schurterb/.local/lib/python2.7/site-packages/Theano-0.7.0-py2.7.egg/theano/sandbox/cuda/basic_ops.py", line 139, in make_node
+    dtype=x.dtype)()])
+  File "/groups/turaga/home/schurterb/.local/lib/python2.7/site-packages/Theano-0.7.0-py2.7.egg/theano/sandbox/cuda/type.py", line 70, in __init__
+    (self.__class__.__name__, dtype, name))
+TypeError: CudaNdarrayType only supports dtype float32 for now. Tried using dtype uint8 for variable None
+

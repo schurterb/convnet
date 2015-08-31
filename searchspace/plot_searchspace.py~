@@ -1,0 +1,90 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Aug 18 09:25:49 2015
+
+@author: schurterb
+
+Temp script for temporary stuff
+"""
+
+
+import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
+import matplotlib.pyplot as plt
+
+sres = np.genfromtxt('convnet_searchspace.csv', delimiter=',')
+tres = np.genfromtxt('convnet_searchspace_known.csv', delimiter=',')
+rres = np.genfromtxt('convnet_searchspace_size5.csv', delimiter=',')
+qres = np.genfromtxt('convnet_searchspace_size7.csv', delimiter=',')
+bres = np.genfromtxt('convnet_searchspace_b100.csv', delimiter=',')
+sres = np.concatenate((sres,tres,rres,qres,bres)).reshape((-1, 6))
+#Values in sres are [nlayers, nfilters, fsize, batchsize, buildtime, traintime]
+#sres = np.genfromtxt('convnet_searchspace_b100.csv', delimiter=',').reshape((-1, 6))
+
+
+#Find the maximum edge of the searchspace that can be loaded into memory
+max_nlayer = int(sres[:,0].max())
+min_nlayer = int(sres[:,0].min())
+nlstep = 2
+
+max_nfilter = int(sres[:,1].max())
+min_nfilter = int(sres[:,1].min())
+nfstep = 10
+
+max_fsize = int(sres[:,2].max())
+min_fsize = int(sres[:,2].min())
+fstep = 2
+
+maxres = []
+for fs in range(min_fsize, max_fsize+fstep, fstep):
+    filter_range = sres[sres[:,2] == fs]
+    for nl in range(min_nlayer, max_nlayer+nlstep, nlstep):
+        temp_range = filter_range[filter_range[:,0] == nl]
+        if(temp_range.size > 0):
+            bestnf = temp_range[:,1].max()
+            maxval = temp_range[temp_range[:,1] == temp_range[:,1].max()]
+            maxres.append(maxval[maxval[:,5] == maxval[:,5].min()])
+maxres = np.asarray(maxres).reshape((-1,6))
+
+
+
+fig = plt.figure()
+ax = fig.gca(projection='3d')
+ax.plot_trisurf(maxres[:,2], maxres[:,0], maxres[:,1], alpha=0.3, cmap=cm.Blues, linewidth=2)
+ax.set_alpha(0.2)
+
+nets = [[5, 6, 5],
+        [5, 30, 5],
+        [6, 30, 7], #May require lower learning rate
+        [8, 25, 5],
+        [8, 50, 5],
+        [10, 20, 5],
+        [12, 11, 5]]
+nets = np.asarray(nets)
+ax.scatter(nets[:,2], nets[:,0], nets[:,1], cmap=cm.Reds, linewidth=4)
+
+ax.set_xlabel('Filter Size')
+ax.set_zlabel('Num Filters')
+ax.set_ylabel('Num Layers')
+ax.set_title('ConvNet SearchSpace')
+
+plt.show()
+
+#TODO: get more data points to make this accurate
+size5 = maxres[maxres[:,2]==5]
+p = np.polyfit(1/size5[:,0], size5[:,1], 5)
+x = np.arange(min_nlayer, max_nlayer)
+y = 0
+for i in range(len(p)):
+    y += p[(len(p)-1) - i]/((0.0+x)**i)
+
+plt.figure()
+#plt.scatter(size5[:,0], size5[:,1], cmap=cm.Reds)
+plt.plot(x, y, 'b')
+plt.scatter(nets[:,0], nets[:,1], cmap=cm.Reds)
+plt.xlim([4, 14])
+plt.ylim([0, 275])
+plt.xlabel("Number of Layers")
+plt.ylabel("Number of Filters")
+plt.title("SearchSpace for size-5 filters")
