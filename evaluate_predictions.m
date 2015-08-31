@@ -9,8 +9,8 @@ function evaluate_predictions(target_file, prediction_file, report_file, descrip
 %    min_step = 1.0;
 %    initial_thresholds = [0.001 0.4 0.8 0.9 0.98 0.99 0.993 0.997 0.999 0.9992 0.9994 0.9996 0.9997 0.9998 0.9999 0.99992 0.99994 0.99996 0.99997 0.99998 0.99999 0.99999 0.999995 0.999999];
 %    min_step = 1.0;
-    initial_thresholds = [0.1:0.1:0.9];
-    min_step = 0.0;
+    initial_thresholds = [0.9:0.01:1.0];
+    min_step = 0.00000001;
     
     f = fopen([report_file '/errors_new.txt'], 'w');
     saveAndPrint(f, 'Description:\n%s\n\n', description);
@@ -19,6 +19,9 @@ function evaluate_predictions(target_file, prediction_file, report_file, descrip
     [r_thresholds, r_fscore, r_tp, r_fp, r_pos, r_neg, ~] = ...
         evaluate_thresholds(target_file, prediction_file, initial_thresholds, 'rand', min_step);
     
+    initial_thresholds = [0.001 0.4 0.8 0.9 0.98 0.99 0.993 0.997 0.999 0.9992 0.9994 0.9996 0.9997 0.9998 0.9999 0.99992 0.99994 0.99996 0.99997 0.99998 0.99999 0.99999 0.999995 0.999999 0.9999995];
+    min_step = 1.0;
+
     fprintf('calculating pixel error\n')
     [p_thresholds, p_err, p_tp, p_fp, p_pos, p_neg, p_sqerr] = ...
         evaluate_thresholds(target_file, prediction_file, initial_thresholds, 'pixel', min_step);
@@ -127,7 +130,6 @@ evaluate_thresholds(target_file, prediction_file, thresholds, randOrPixel, min_s
     fp=fp*n_examples;
     pos = sum(pos .* n_examples);
     neg = sum(neg .* n_examples);
-    fpr = fp ./ neg;
     p_sqerr = sum(p_sqerr .* n_examples) / sum(n_examples);
     if(strcmp(randOrPixel,'rand'))
         prec = tp ./ (tp + fp);
@@ -142,9 +144,9 @@ evaluate_thresholds(target_file, prediction_file, thresholds, randOrPixel, min_s
 
     step = thresholds(2) - thresholds(1);
     best_threshold = thresholds(idx);
-    fprintf('Thresholds = %f:%f:%f, Best %s = %f, fpr = %f\n', thresholds(1), step, thresholds(end), randOrPixel, best_err, fpr);
-    
-    if(fpr > 0.0 | min_step > new_step)
+    fprintf('Thresholds = %f:%f:%f, Best %s = %f\n', thresholds(1), step, thresholds(end), randOrPixel, best_err);
+
+    if(step > min_step)
         new_step = 2 * step/(length(thresholds)-1);
         inner_thresholds = best_threshold-step:new_step:best_threshold+step;
         [thresholds_, err_, tp_, fp_, ~, ~, ~] = ...
